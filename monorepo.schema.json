@@ -1,0 +1,381 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "./monorepo.schema.json",
+  "title": "Monorepo Configuration Schema",
+  "description": "Configuration schema for monorepo-consistency tool",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "enum": ["1.0.0"],
+      "default": "1.0.0",
+      "description": "Config schema version"
+    },
+    "deps": {
+      "type": "object",
+      "description": "Dependency management configuration",
+      "properties": {
+        "taze": {
+          "type": "object",
+          "description": "Taze dependency updater configuration",
+          "properties": {
+            "runner": {
+              "type": "string",
+              "enum": ["npx", "pnpx", "yarn", "bunx"],
+              "default": "npx",
+              "description": "Command runner for taze"
+            },
+            "configPath": {
+              "type": "string",
+              "description": "Path to taze configuration file"
+            }
+          }
+        },
+        "checkUnused": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for unused dependencies"
+        },
+        "checkMissing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for missing dependencies"
+        },
+        "checkVersionMismatch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for version mismatches"
+        },
+        "ignoredPackages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Packages to ignore in checks"
+        },
+        "versionGroups": {
+          "type": "array",
+          "description": "Groups of packages that must have matching dependency versions",
+          "items": {
+            "type": "object",
+            "properties": {
+              "packages": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Package patterns to group"
+              },
+              "dependencies": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Dependencies that must match versions"
+              },
+              "policy": {
+                "type": "string",
+                "enum": ["exact", "semver"],
+                "default": "semver",
+                "description": "Version matching policy"
+              }
+            },
+            "required": ["packages", "dependencies"]
+          }
+        }
+      }
+    },
+    "tsconfig": {
+      "type": "object",
+      "description": "TypeScript configuration management",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable TypeScript config generation"
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["web", "node", "builder"]
+          },
+          "default": ["web", "node", "builder"],
+          "description": "Config types to generate"
+        },
+        "generateTypecheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Generate tsconfig.typecheck.json files"
+        },
+        "filterPathsByDependencies": {
+          "type": "boolean",
+          "default": true,
+          "description": "Filter compilerOptions.paths to only include actual dependencies"
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "description": "Code quality configuration",
+      "properties": {
+        "linting": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "fix": { "type": "boolean", "default": false },
+            "configPath": { "type": "string" }
+          }
+        },
+        "typeChecking": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "strict": { "type": "boolean", "default": true },
+            "configPath": { "type": "string" }
+          }
+        },
+        "testing": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "coverage": { "type": "boolean", "default": false },
+            "minCoverage": { "type": "number", "minimum": 0, "maximum": 100, "default": 80 }
+          }
+        }
+      }
+    },
+    "packageJson": {
+      "type": "object",
+      "description": "Package.json hygiene configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable package.json hygiene checks"
+        },
+        "scripts": {
+          "type": "object",
+          "description": "Script consistency configuration",
+          "properties": {
+            "enforce": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enforce script presence across packages"
+            },
+            "required": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "default": {},
+              "description": "Scripts that must exist in all packages (name -> command)"
+            },
+            "recommended": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "default": {},
+              "description": "Scripts that should exist (warns if missing)"
+            },
+            "forbidden": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": [],
+              "description": "Script names that should not exist"
+            },
+            "ignorePackages": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": [],
+              "description": "Package names/patterns to exclude from script checks"
+            }
+          }
+        },
+        "fields": {
+          "type": "object",
+          "description": "Package.json field validation",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string",
+                        "description": "Field name"
+                      },
+                      "default": {
+                        "description": "Default value to use when auto-fixing"
+                      }
+                    },
+                    "required": ["field", "default"]
+                  }
+                ]
+              },
+              "default": ["name", "version"],
+              "description": "Required fields in package.json (string or object with default)"
+            },
+            "forbidden": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": [],
+              "description": "Fields that should not exist"
+            }
+          }
+        },
+        "consistency": {
+          "type": "object",
+          "description": "Consistency check options",
+          "properties": {
+            "checkLicense": {
+              "type": "boolean",
+              "default": true,
+              "description": "Ensure consistent license"
+            },
+            "checkEngines": {
+              "type": "boolean",
+              "default": true,
+              "description": "Check Node.js engine versions"
+            },
+            "checkRepository": {
+              "type": "boolean",
+              "default": false,
+              "description": "Validate repository field"
+            },
+            "checkAuthor": {
+              "type": "boolean",
+              "default": false,
+              "description": "Validate author field"
+            }
+          }
+        },
+        "autoFix": {
+          "type": "object",
+          "description": "Auto-fix configuration",
+          "properties": {
+            "addMissingScripts": {
+              "type": "boolean",
+              "default": false,
+              "description": "Add missing required scripts"
+            },
+            "removeInvalidFields": {
+              "type": "boolean",
+              "default": false,
+              "description": "Remove forbidden fields"
+            }
+          }
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "description": "Workspace configuration",
+      "properties": {
+        "packageManager": {
+          "type": "string",
+          "enum": ["pnpm", "npm", "yarn"],
+          "default": "pnpm"
+        },
+        "rootPath": { "type": "string" },
+        "workspacePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["packages/*", "apps/*"]
+        },
+        "ignoredWorkspaces": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "description": "Package catalog configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "pattern": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "required": ["name", "pattern"]
+          }
+        },
+        "generateDocs": { "type": "boolean", "default": false },
+        "outputPath": { "type": "string" }
+      }
+    },
+    "health": {
+      "type": "object",
+      "description": "Health check configuration",
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["dependencies", "quality", "build", "tests", "documentation"]
+          },
+          "default": ["dependencies", "quality"]
+        },
+        "failFast": { "type": "boolean", "default": false },
+        "reportFormat": {
+          "type": "string",
+          "enum": ["json", "html", "markdown"],
+          "default": "markdown"
+        },
+        "outputPath": { "type": "string" }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "description": "CI-specific settings",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "failOnWarning": { "type": "boolean", "default": false }
+      }
+    },
+    "output": {
+      "type": "object",
+      "description": "Output configuration",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["pretty", "json", "compact"],
+          "default": "pretty"
+        },
+        "verbose": { "type": "boolean", "default": false },
+        "silent": { "type": "boolean", "default": false }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "description": "Plugins to load",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    "extends": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ],
+      "description": "Config files to extend from"
+    }
+  }
+}

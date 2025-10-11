@@ -1,0 +1,60 @@
+{
+  "name": "@rad/monorepo-consistency",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "mono": "./dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "types": "tsc -p tsconfig.typecheck.json",
+    "knip": "knip",
+    "dev": "tsx src/cli.ts",
+    "generate-schema": "tsx scripts/generate-schema.ts",
+    "build:watch": "unbuild --watch"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.1",
+    "fast-glob": "^3.3.3",
+    "get-tsconfig": "^4.12.0",
+    "lodash": "^4.17.21",
+    "minimatch": "^10.0.3",
+    "ora": "^9.0.0",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12",
+    "zod-to-json-schema": "^3.24.6",
+    "zx": "^8.8.4"
+  },
+  "devDependencies": {
+    "@rad/build-configs": "workspace:*",
+    "@rad/eslint": "workspace:*",
+    "@types/lodash": "^4.17.20",
+    "@types/node": "^24.7.2",
+    "eslint": "^9.37.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "unbuild": "^3.6.1"
+  },
+  "engines": {
+    "node": ">= 22",
+    "pnpm": ">= 10",
+    "npm": ">= 11"
+  },
+  "private": true
+}

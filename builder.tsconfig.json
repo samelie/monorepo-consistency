@@ -1,0 +1,62 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "lib": [
+            "ES2020",
+            "DOM"
+        ],
+        "moduleResolution": "bundler",
+        "outDir": "./dist",
+        "esModuleInterop": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "jsx": "preserve",
+        "declaration": true,
+        "declarationDir": "./dist/types",
+        "resolveJsonModule": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "verbatimModuleSyntax": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "strictFunctionTypes": true,
+        "strictBindCallApply": true,
+        "strictPropertyInitialization": true,
+        "strictBuiltinIteratorReturn": true,
+        "alwaysStrict": true,
+        "useUnknownInCatchVariables": true,
+        "resolvePackageJsonExports": true,
+        "resolvePackageJsonImports": true,
+        "allowSyntheticDefaultImports": true,
+        "isolatedModules": true,
+        "preserveConstEnums": true,
+        "composite": true,
+        "noEmit": false
+    },
+    "paths": {
+        "@rad/eslint-plugin-rules": [
+            "./packages/eslint-plugin-rules",
+            "../eslint-plugin-rules",
+            "../packages/eslint-plugin-rules",
+            "../../packages/eslint-plugin-rules",
+            "../../../packages/eslint-plugin-rules",
+            "../../../../packages/eslint-plugin-rules"
+        ]
+    },
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.vue"
+    ],
+    "exclude": [
+        "dist",
+        "node_modules",
+        "**/*.spec.ts",
+        "dist/types"
+    ]
+}

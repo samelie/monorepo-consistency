@@ -1,0 +1,85 @@
+import { Command } from 'commander';
+import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { logger } from '../utils/logger.js';
+import {
+  writeJsonSchemaToFile,
+  generateTypeScriptDefinitions,
+  createConfigTemplate,
+} from '../config/json-schema.js';
+
+export function createSchemaCommand(): Command {
+  const command = new Command('schema');
+
+  command
+    .description('Generate configuration schemas and templates')
+    .option('-o, --output <path>', 'output file path')
+    .option('--format <type>', 'output format (json|typescript|template)', 'json')
+    .action(async (options) => {
+      try {
+        const cwd = command.optsWithGlobals().cwd || process.cwd();
+        const outputPath = options.output
+          ? resolve(cwd, options.output)
+          : undefined;
+
+        switch (options.format) {
+          case 'json': {
+            const filePath = writeJsonSchemaToFile(outputPath);
+            logger.success(`JSON Schema generated: ${filePath}`);
+            break;
+          }
+
+          case 'typescript': {
+            const definitions = generateTypeScriptDefinitions();
+            const filePath = outputPath || resolve(cwd, 'monorepo.d.ts');
+            writeFileSync(filePath, definitions, 'utf-8');
+            logger.success(`TypeScript definitions generated: ${filePath}`);
+            break;
+          }
+
+          case 'template': {
+            const template = createConfigTemplate();
+            const filePath = outputPath || resolve(cwd, 'monorepo.config.json');
+            writeFileSync(filePath, JSON.stringify(template, null, 2), 'utf-8');
+            logger.success(`Configuration template generated: ${filePath}`);
+            break;
+          }
+
+          default:
+            logger.error(`Unknown format: ${options.format}`);
+            process.exit(1);
+        }
+      } catch (error) {
+        logger.error(`Failed to generate schema: ${String(error)}`);
+        process.exit(1);
+      }
+    });
+
+  // Subcommand for validating a config file
+  command
+    .command('validate')
+    .description('Validate a configuration file')
+    .argument('<file>', 'configuration file to validate')
+    .action(async (file) => {
+      try {
+        const { loadConfig } = await import('../config/loader.js');
+        const cwd = command.optsWithGlobals().cwd || process.cwd();
+        const configPath = resolve(cwd, file);
+
+        logger.info(`Validating configuration: ${configPath}`);
+
+        await loadConfig({
+          configPath,
+          validate: true,
+        });
+
+        logger.success('Configuration is valid!');
+      } catch (error) {
+        logger.error(`Configuration validation failed:`);
+        logger.error(String(error));
+        process.exit(1);
+      }
+    });
+
+  return command;
+}

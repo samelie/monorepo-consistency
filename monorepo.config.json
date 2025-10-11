@@ -1,0 +1,60 @@
+{
+  "$schema": "./monorepo.schema.json",
+  "version": "1.0.0",
+  "deps": {
+    "taze": {
+      "runner": "pnpx"
+    }
+  },
+     "packageJson": {
+    "enabled": true,
+    "scripts": {
+      "enforce": true,
+      "required": {
+      },
+      "recommended": {
+        "build": "unbuild",
+        "lint": "eslint .",
+        "lint:fix": "eslint --fix .",
+        "types": "tsc -p tsconfig.typecheck.json",
+        "test": "vitest run",
+        "dev": "tsx src/index.ts"
+      },
+      "forbidden": [
+        "prepublish",
+        "prepublishOnly"
+      ],
+      "ignorePackages": [
+        "@rad/config",
+        "@rad/eslint"
+      ]
+    },
+    "fields": {
+      "required": [
+        "name",
+        { "field": "version", "default": "0.0.1" },
+        { "field": "type", "default": "module" },
+        {
+          "field": "engines",
+          "default": {
+            "node": ">= 22",
+            "pnpm": ">= 10",
+            "npm": ">= 11"
+          }
+        },
+        { "field": "private", "default": true }
+      ],
+      "forbidden": ["postinstall"]
+    },
+    "consistency": {
+      "checkLicense": true,
+      "checkEngines": true,
+      "checkRepository": false,
+      "checkAuthor": false
+    },
+    "autoFix": {
+      "addMissingScripts": true,
+      "removeInvalidFields": true
+    }
+  }
+}
