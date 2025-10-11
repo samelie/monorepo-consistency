@@ -15,6 +15,7 @@ interface PackageJsonCheckOptions extends CommandOptions {
 
 interface PackageJsonFixOptions extends CommandOptions {
   addScripts?: boolean;
+  addRecommendedScripts?: boolean;
   addFields?: boolean;
   removeFields?: boolean;
 }
@@ -329,6 +330,28 @@ export const fix = async (options: PackageJsonFixOptions): Promise<FixResult> =>
               package: pkg.name,
               file: pkgJsonPath,
               description: `Added required script: "${scriptName}"`,
+              after: scriptCommand,
+            });
+          }
+        }
+
+        pkgJson.scripts = scripts;
+      }
+
+      // Add missing recommended scripts
+      if (options.addRecommendedScripts && !isIgnoredForScripts && scriptConfig?.recommended) {
+        const scripts = (pkgJson.scripts || {}) as Record<string, string>;
+
+        for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.recommended)) {
+          if (!scripts[scriptName]) {
+            scripts[scriptName] = scriptCommand;
+            modified = true;
+
+            changes.push({
+              type: 'add-recommended-script',
+              package: pkg.name,
+              file: pkgJsonPath,
+              description: `Added recommended script: "${scriptName}"`,
               after: scriptCommand,
             });
           }
