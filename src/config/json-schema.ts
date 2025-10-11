@@ -50,7 +50,7 @@ export function generateTypeScriptDefinitions(): string {
  * Do not edit manually - this file is generated from the Zod schema
  */
 
-import type { MonorepoConfig } from '@rad/monorepo-consistency';
+import type { MonorepoConfig } from '@adddog/monorepo-consistency';
 
 declare module 'monorepo.config' {
   const config: MonorepoConfig;

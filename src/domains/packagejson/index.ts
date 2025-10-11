@@ -16,8 +16,10 @@ interface PackageJsonCheckOptions extends CommandOptions {
 interface PackageJsonFixOptions extends CommandOptions {
   addScripts?: boolean;
   addRecommendedScripts?: boolean;
+  removeScripts?: boolean;
   addFields?: boolean;
   removeFields?: boolean;
+  all?: boolean;
 }
 
 /**
@@ -317,7 +319,7 @@ export const fix = async (options: PackageJsonFixOptions): Promise<FixResult> =>
       const isIgnoredForScripts = scriptConfig && shouldIgnorePackage(pkg.name, scriptConfig.ignorePackages || []);
 
       // Add missing required scripts
-      if (options.addScripts && !isIgnoredForScripts && autoFixConfig.addMissingScripts && scriptConfig?.required) {
+      if ((options.addScripts || options.all) && !isIgnoredForScripts && autoFixConfig.addMissingScripts && scriptConfig?.required) {
         const scripts = (pkgJson.scripts || {}) as Record<string, string>;
 
         for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.required)) {
@@ -339,7 +341,7 @@ export const fix = async (options: PackageJsonFixOptions): Promise<FixResult> =>
       }
 
       // Add missing recommended scripts
-      if (options.addRecommendedScripts && !isIgnoredForScripts && scriptConfig?.recommended) {
+      if ((options.addRecommendedScripts || options.all) && !isIgnoredForScripts && scriptConfig?.recommended) {
         const scripts = (pkgJson.scripts || {}) as Record<string, string>;
 
         for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.recommended)) {
@@ -360,8 +362,30 @@ export const fix = async (options: PackageJsonFixOptions): Promise<FixResult> =>
         pkgJson.scripts = scripts;
       }
 
+      // Remove forbidden scripts
+      if ((options.removeScripts || options.all) && !isIgnoredForScripts && scriptConfig?.forbidden) {
+        const scripts = (pkgJson.scripts || {}) as Record<string, string>;
+
+        for (const scriptName of scriptConfig.forbidden) {
+          if (scripts[scriptName]) {
+            delete scripts[scriptName];
+            modified = true;
+
+            changes.push({
+              type: 'remove-script',
+              package: pkg.name,
+              file: pkgJsonPath,
+              description: `Removed forbidden script: "${scriptName}"`,
+              before: scripts[scriptName],
+            });
+          }
+        }
+
+        pkgJson.scripts = scripts;
+      }
+
       // Add missing required fields
-      if (options.addFields && fieldConfig?.required) {
+      if ((options.addFields || options.all) && fieldConfig?.required) {
         for (const fieldEntry of fieldConfig.required) {
           const { field, default: defaultValue } = normalizeFieldEntry(fieldEntry);
 
@@ -381,7 +405,7 @@ export const fix = async (options: PackageJsonFixOptions): Promise<FixResult> =>
       }
 
       // Remove forbidden fields
-      if (options.removeFields && autoFixConfig.removeInvalidFields && fieldConfig?.forbidden) {
+      if ((options.removeFields || options.all) && autoFixConfig.removeInvalidFields && fieldConfig?.forbidden) {
         for (const field of fieldConfig.forbidden) {
           if (field in pkgJson) {
             delete pkgJson[field];

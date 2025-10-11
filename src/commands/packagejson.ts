@@ -67,8 +67,10 @@ export function createPackageJsonCommand(): Command {
     .description('Auto-fix package.json issues')
     .option('--add-scripts', 'add missing required scripts')
     .option('--add-recommended-scripts', 'add missing recommended scripts')
+    .option('--remove-scripts', 'remove forbidden scripts')
     .option('--add-fields', 'add missing required fields with defaults')
     .option('--remove-fields', 'remove forbidden fields')
+    .option('--all', 'apply all available fixes')
     .option('--dry-run', 'preview changes without writing')
     .action(async (options) => {
       try {

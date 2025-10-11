@@ -1,5 +1,5 @@
 /**
- * @rad/monorepo-consistency
+ * @adddog/monorepo-consistency
  *
  * A comprehensive toolkit for maintaining consistency in pnpm monorepos
  */
