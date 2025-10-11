@@ -1,42 +1,74 @@
 {
     "compilerOptions": {
-      "target": "ES2020",
-      "module": "ESNext",
-      "lib": ["ES2020", "DOM"],
-      "moduleResolution": "bundler",
-      "outDir": "dist",
-      "esModuleInterop": true,
-      "strict": true,
-      "skipLibCheck": true,
-      "jsx": "preserve",
-      "declaration": true,
-      "declarationDir": "dist/types",
-      "resolveJsonModule": true,
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "noImplicitReturns": true,
-      "noFallthroughCasesInSwitch": true,
-      "verbatimModuleSyntax": true,
-      "forceConsistentCasingInFileNames": true
-    },
-    "paths": {
-        "@rad/eslint-plugin-rules": [
-            "./packages/eslint-plugin-rules",
-            "../eslint-plugin-rules",
-            "../packages/eslint-plugin-rules",
-            "../../packages/eslint-plugin-rules",
-            "../../../packages/eslint-plugin-rules",
-            "../../../../packages/eslint-plugin-rules"
+        "resolveJsonModule": true,
+        "strictNullChecks": true,
+        "esModuleInterop": true,
+        "verbatimModuleSyntax": true,
+        "skipDefaultLibCheck": true,
+        "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
+        "noErrorTruncation": true,
+        "traceResolution": false,
+        "noPropertyAccessFromIndexSignature": false,
+        "target": "ESNext",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "lib": [
+            "ESNext",
+            "DOM",
+            "DOM.Iterable",
+            "esnext",
+            "esnext.asynciterable"
+        ],
+        "skipLibCheck": true,
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "isolatedModules": true,
+        "moduleDetection": "force",
+        "noEmit": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedSideEffectImports": true,
+        "paths": {
+            "@rad/config/*": [
+                "./packages/config/*",
+                "../config/*",
+                "../packages/config/*",
+                "../../packages/config/*",
+                "../../../packages/config/*"
+            ],
+            "@rad/eslint": [
+                "./packages/eslint",
+                "../eslint",
+                "../packages/eslint",
+                "../../packages/eslint",
+                "../../../packages/eslint",
+                "../../../../packages/eslint"
+            ]
+        },
+        "types": [
+            "node"
         ]
     },
     "include": [
-      "src/**/*.ts",
-      "src/**/*.tsx",
-      "src/**/*.vue"
+        "src"
     ],
     "exclude": [
-      "dist",
-      "node_modules",
-      "**/*.spec.ts"
-    ]
-  }
+        "node_modules",
+        "dist",
+        "build"
+    ],
+    "watchOptions": {
+        "excludeDirectories": [
+            "**/node_modules",
+            "build",
+            "dist"
+        ],
+        "fallbackPolling": "dynamicPriority",
+        "synchronousWatchDirectory": true,
+        "watchDirectory": "UseFsEvents",
+        "watchFile": "UseFsEventsOnParentDirectory"
+    }
+}

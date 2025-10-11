@@ -3,29 +3,29 @@
  */
 
 export {
-  configSchema,
-  type MonorepoConfig,
-  type DepsConfig,
-  type QualityConfig,
-  type WorkspaceConfig,
-  type CatalogConfig,
-  type HealthConfig,
-  type TazeConfig,
-} from './schema.js';
+    createConfigTemplate,
+    generateJsonSchema,
+    generateTypeScriptDefinitions,
+    validateConfig,
+    writeJsonSchemaToFile,
+} from "./json-schema.js";
 
 export {
-  loadConfig,
-  loadConfigSync,
-  ConfigManager,
-  ConfigLoaderError,
-  ConfigValidationError,
-  type LoadConfigOptions,
-} from './loader.js';
+    ConfigLoaderError,
+    ConfigManager,
+    ConfigValidationError,
+    loadConfig,
+    type LoadConfigOptions,
+    loadConfigSync,
+} from "./loader.js";
 
 export {
-  generateJsonSchema,
-  writeJsonSchemaToFile,
-  generateTypeScriptDefinitions,
-  createConfigTemplate,
-  validateConfig,
-} from './json-schema.js';
+    type CatalogConfig,
+    configSchema,
+    type DepsConfig,
+    type HealthConfig,
+    type MonorepoConfig,
+    type QualityConfig,
+    type TazeConfig,
+    type WorkspaceConfig,
+} from "./schema.js";

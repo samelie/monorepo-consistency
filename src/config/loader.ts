@@ -1,462 +1,465 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname, extname, isAbsolute } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { z } from 'zod';
-import { configSchema, type MonorepoConfig } from './schema.js';
+import type { MonorepoConfig } from "./schema.js";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, extname, isAbsolute, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { z } from "zod/v3";
+import { configSchema } from "./schema.js";
 
 /**
  * Configuration loader error
  */
 export class ConfigLoaderError extends Error {
-  constructor(
-    message: string,
-    public readonly path?: string,
-    public readonly cause?: unknown
-  ) {
-    super(message);
-    this.name = 'ConfigLoaderError';
-  }
+    constructor(
+        message: string,
+        public readonly path?: string,
+        public readonly cause?: unknown,
+    ) {
+        super(message);
+        this.name = "ConfigLoaderError";
+    }
 }
 
 /**
  * Configuration validation error with detailed issues
  */
 export class ConfigValidationError extends ConfigLoaderError {
-  constructor(
-    public readonly issues: z.ZodIssue[],
-    path?: string
-  ) {
-    const message = `Configuration validation failed:\n${issues
-      .map(issue => `  - ${issue.path.join('.')}: ${issue.message}`)
-      .join('\n')}`;
-    super(message, path);
-    this.name = 'ConfigValidationError';
-  }
+    constructor(
+        public readonly issues: z.ZodIssue[],
+        path?: string,
+    ) {
+        const message = `Configuration validation failed:\n${issues
+            .map(issue => `  - ${issue.path.join(".")}: ${issue.message}`)
+            .join("\n")}`;
+        super(message, path);
+        this.name = "ConfigValidationError";
+    }
 }
 
 /**
  * Supported configuration file formats
  */
-const CONFIG_EXTENSIONS = ['.json', '.js', '.mjs', '.ts', '.mts'] as const;
+const CONFIG_EXTENSIONS = [".json", ".js", ".mjs", ".ts", ".mts"] as const;
 type ConfigExtension = typeof CONFIG_EXTENSIONS[number];
 
 /**
  * Default configuration file names
  */
 const DEFAULT_CONFIG_NAMES = [
-  'monorepo.config',
-  '.monoreporc',
-  'mono.config',
+    "monorepo.config",
+    ".monoreporc",
+    "mono.config",
 ] as const;
 
 /**
  * Configuration loader options
  */
 export interface LoadConfigOptions {
-  /** Working directory */
-  cwd?: string;
-  /** Config file path (absolute or relative to cwd) */
-  configPath?: string;
-  /** Whether to validate the configuration */
-  validate?: boolean;
-  /** Allow partial configuration (missing required fields) */
-  partial?: boolean;
-  /** Merge with default configuration */
-  defaults?: Partial<MonorepoConfig>;
+    /** Working directory */
+    cwd?: string;
+    /** Config file path (absolute or relative to cwd) */
+    configPath?: string;
+    /** Whether to validate the configuration */
+    validate?: boolean;
+    /** Allow partial configuration (missing required fields) */
+    partial?: boolean;
+    /** Merge with default configuration */
+    defaults?: Partial<MonorepoConfig>;
 }
 
 /**
  * Load a configuration file
  */
 async function loadConfigFile(filePath: string): Promise<unknown> {
-  const ext = extname(filePath) as ConfigExtension;
+    const ext = extname(filePath) as ConfigExtension;
 
-  switch (ext) {
-    case '.json': {
-      const content = readFileSync(filePath, 'utf-8');
-      try {
-        return JSON.parse(content) as unknown;
-      } catch (error) {
-        throw new ConfigLoaderError(
-          `Failed to parse JSON configuration`,
-          filePath,
-          error
-        );
-      }
+    switch (ext) {
+        case ".json": {
+            const content = readFileSync(filePath, "utf-8");
+            try {
+                return JSON.parse(content) as unknown;
+            } catch (error) {
+                throw new ConfigLoaderError(
+                    `Failed to parse JSON configuration`,
+                    filePath,
+                    error,
+                );
+            }
+        }
+
+        case ".js":
+        case ".mjs":
+        case ".ts":
+        case ".mts": {
+            try {
+                // Use dynamic import for JS/TS modules
+                const fileUrl = pathToFileURL(filePath).href;
+                const module = await import(fileUrl) as { default?: unknown };
+
+                // Support both default export and module.exports style
+                return module.default ?? module;
+            } catch (error) {
+                throw new ConfigLoaderError(
+                    `Failed to load module configuration`,
+                    filePath,
+                    error,
+                );
+            }
+        }
+
+        default:
+            throw new ConfigLoaderError(
+                `Unsupported configuration file extension: ${ext}`,
+                filePath,
+            );
     }
-
-    case '.js':
-    case '.mjs':
-    case '.ts':
-    case '.mts': {
-      try {
-        // Use dynamic import for JS/TS modules
-        const fileUrl = pathToFileURL(filePath).href;
-        const module = await import(fileUrl) as { default?: unknown };
-
-        // Support both default export and module.exports style
-        return module.default ?? module;
-      } catch (error) {
-        throw new ConfigLoaderError(
-          `Failed to load module configuration`,
-          filePath,
-          error
-        );
-      }
-    }
-
-    default:
-      throw new ConfigLoaderError(
-        `Unsupported configuration file extension: ${ext}`,
-        filePath
-      );
-  }
 }
 
 /**
  * Find configuration file in directory
  */
 function findConfigFile(dir: string): string | undefined {
-  // Check each default name with each extension
-  for (const name of DEFAULT_CONFIG_NAMES) {
-    for (const ext of CONFIG_EXTENSIONS) {
-      const filePath = resolve(dir, `${name}${ext}`);
-      if (existsSync(filePath)) {
-        return filePath;
-      }
+    // Check each default name with each extension
+    for (const name of DEFAULT_CONFIG_NAMES) {
+        for (const ext of CONFIG_EXTENSIONS) {
+            const filePath = resolve(dir, `${name}${ext}`);
+            if (existsSync(filePath)) {
+                return filePath;
+            }
+        }
     }
-  }
 
-  // Check for package.json with monorepo field
-  const packageJsonPath = resolve(dir, 'package.json');
-  if (existsSync(packageJsonPath)) {
-    try {
-      const content = readFileSync(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(content) as { monorepo?: unknown };
-      if (packageJson.monorepo) {
-        return packageJsonPath;
-      }
-    } catch {
-      // Ignore parse errors
+    // Check for package.json with monorepo field
+    const packageJsonPath = resolve(dir, "package.json");
+    if (existsSync(packageJsonPath)) {
+        try {
+            const content = readFileSync(packageJsonPath, "utf-8");
+            const packageJson = JSON.parse(content) as { monorepo?: unknown };
+            if (packageJson.monorepo) {
+                return packageJsonPath;
+            }
+        } catch {
+            // Ignore parse errors
+        }
     }
-  }
 
-  return undefined;
+    return undefined;
 }
 
 /**
  * Resolve configuration file path
  */
 function resolveConfigPath(options: LoadConfigOptions): string | undefined {
-  const cwd = options.cwd ?? process.cwd();
+    const cwd = options.cwd ?? process.cwd();
 
-  if (options.configPath) {
+    if (options.configPath) {
     // Use provided path
-    const configPath = isAbsolute(options.configPath)
-      ? options.configPath
-      : resolve(cwd, options.configPath);
+        const configPath = isAbsolute(options.configPath)
+            ? options.configPath
+            : resolve(cwd, options.configPath);
 
-    if (!existsSync(configPath)) {
-      throw new ConfigLoaderError(
-        `Configuration file not found`,
-        configPath
-      );
+        if (!existsSync(configPath)) {
+            throw new ConfigLoaderError(
+                `Configuration file not found`,
+                configPath,
+            );
+        }
+
+        return configPath;
     }
 
-    return configPath;
-  }
+    // Search for config file
+    let currentDir = cwd;
+    const root = resolve("/");
 
-  // Search for config file
-  let currentDir = cwd;
-  const root = resolve('/');
+    while (currentDir !== root) {
+        const configPath = findConfigFile(currentDir);
+        if (configPath) {
+            return configPath;
+        }
 
-  while (currentDir !== root) {
-    const configPath = findConfigFile(currentDir);
-    if (configPath) {
-      return configPath;
+        const parentDir = dirname(currentDir);
+        if (parentDir === currentDir) {
+            break;
+        }
+        currentDir = parentDir;
     }
 
-    const parentDir = dirname(currentDir);
-    if (parentDir === currentDir) {
-      break;
-    }
-    currentDir = parentDir;
-  }
-
-  return undefined;
+    return undefined;
 }
 
 /**
  * Merge configuration objects deeply
  */
 function mergeConfigs(
-  base: Partial<MonorepoConfig>,
-  ...configs: Array<Partial<MonorepoConfig>>
+    base: Partial<MonorepoConfig>,
+    ...configs: Array<Partial<MonorepoConfig>>
 ): MonorepoConfig {
-  let result: any = { ...base };
+    let result: any = { ...base };
 
-  for (const config of configs) {
-    result = {
-      ...result,
-      ...config,
-      // Deep merge for nested objects
-      ...(result.deps || config.deps ? { deps: { ...result.deps, ...config.deps } } : {}),
-      ...(result.quality || config.quality ? {
-        quality: {
-          ...result.quality,
-          ...config.quality,
-          ...(result.quality?.linting || config.quality?.linting ? { linting: { ...result.quality?.linting, ...config.quality?.linting } } : {}),
-          ...(result.quality?.typeChecking || config.quality?.typeChecking ? { typeChecking: { ...result.quality?.typeChecking, ...config.quality?.typeChecking } } : {}),
-          ...(result.quality?.testing || config.quality?.testing ? { testing: { ...result.quality?.testing, ...config.quality?.testing } } : {}),
-        }
-      } : {}),
-      ...(result.workspace || config.workspace ? { workspace: { ...result.workspace, ...config.workspace } } : {}),
-      ...(result.catalog || config.catalog ? { catalog: { ...result.catalog, ...config.catalog } } : {}),
-      ...(result.health || config.health ? { health: { ...result.health, ...config.health } } : {}),
-      ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
-      ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
-    };
-  }
+    for (const config of configs) {
+        result = {
+            ...result,
+            ...config,
+            // Deep merge for nested objects
+            ...(result.deps || config.deps ? { deps: { ...result.deps, ...config.deps } } : {}),
+            ...(result.quality || config.quality
+                ? {
+                        quality: {
+                            ...result.quality,
+                            ...config.quality,
+                            ...(result.quality?.linting || config.quality?.linting ? { linting: { ...result.quality?.linting, ...config.quality?.linting } } : {}),
+                            ...(result.quality?.typeChecking || config.quality?.typeChecking ? { typeChecking: { ...result.quality?.typeChecking, ...config.quality?.typeChecking } } : {}),
+                            ...(result.quality?.testing || config.quality?.testing ? { testing: { ...result.quality?.testing, ...config.quality?.testing } } : {}),
+                        },
+                    }
+                : {}),
+            ...(result.workspace || config.workspace ? { workspace: { ...result.workspace, ...config.workspace } } : {}),
+            ...(result.catalog || config.catalog ? { catalog: { ...result.catalog, ...config.catalog } } : {}),
+            ...(result.health || config.health ? { health: { ...result.health, ...config.health } } : {}),
+            ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
+            ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
+        };
+    }
 
-  return result as MonorepoConfig;
+    return result as MonorepoConfig;
 }
 
 /**
  * Process extends property to load parent configurations
  */
 async function processExtends(
-  config: unknown,
-  basePath: string
+    config: unknown,
+    basePath: string,
 ): Promise<Partial<MonorepoConfig>> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-  const extendsValue = (config as any)?.extends as string | string[] | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    const extendsValue = (config as any)?.extends as string | string[] | undefined;
 
-  if (!extendsValue) {
-    return config as Partial<MonorepoConfig>;
-  }
+    if (!extendsValue) {
+        return config as Partial<MonorepoConfig>;
+    }
 
-  const extendsPaths = Array.isArray(extendsValue) ? extendsValue : [extendsValue];
-  const parentConfigs: Array<Partial<MonorepoConfig>> = [];
+    const extendsPaths = Array.isArray(extendsValue) ? extendsValue : [extendsValue];
+    const parentConfigs: Array<Partial<MonorepoConfig>> = [];
 
-  for (const extendsPath of extendsPaths) {
-    const resolvedPath = isAbsolute(extendsPath)
-      ? extendsPath
-      : resolve(dirname(basePath), extendsPath);
+    for (const extendsPath of extendsPaths) {
+        const resolvedPath = isAbsolute(extendsPath)
+            ? extendsPath
+            : resolve(dirname(basePath), extendsPath);
 
-    const parentConfig = await loadConfig({
-      configPath: resolvedPath,
-      validate: false,
-    });
+        const parentConfig = await loadConfig({
+            configPath: resolvedPath,
+            validate: false,
+        });
 
-    parentConfigs.push(parentConfig);
-  }
+        parentConfigs.push(parentConfig);
+    }
 
-  // Remove extends from current config
-  const { extends: _, ...currentConfig } = config as Record<string, unknown>;
+    // Remove extends from current config
+    const { extends: _, ...currentConfig } = config as Record<string, unknown>;
 
-  // Merge in order: parent configs, then current config
-  return mergeConfigs({}, ...parentConfigs, currentConfig as Partial<MonorepoConfig>);
+    // Merge in order: parent configs, then current config
+    return mergeConfigs({}, ...parentConfigs, currentConfig as Partial<MonorepoConfig>);
 }
 
 /**
  * Load and validate configuration
  */
 export async function loadConfig(
-  options: LoadConfigOptions = {}
+    options: LoadConfigOptions = {},
 ): Promise<MonorepoConfig> {
-  const configPath = resolveConfigPath(options);
+    const configPath = resolveConfigPath(options);
 
-  if (!configPath) {
-    if (options.defaults) {
-      return configSchema.parse(options.defaults);
+    if (!configPath) {
+        if (options.defaults) {
+            return configSchema.parse(options.defaults);
+        }
+        throw new ConfigLoaderError("No configuration file found");
     }
-    throw new ConfigLoaderError('No configuration file found');
-  }
 
-  // Load raw configuration
-  let rawConfig = await loadConfigFile(configPath);
+    // Load raw configuration
+    let rawConfig = await loadConfigFile(configPath);
 
-  // Handle package.json special case
-  if (configPath.endsWith('package.json')) {
+    // Handle package.json special case
+    if (configPath.endsWith("package.json")) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    rawConfig = (rawConfig as any).monorepo as unknown;
-    if (!rawConfig) {
-      throw new ConfigLoaderError(
-        'No "monorepo" field found in package.json',
-        configPath
-      );
+        rawConfig = (rawConfig as any).monorepo as unknown;
+        if (!rawConfig) {
+            throw new ConfigLoaderError(
+                "No \"monorepo\" field found in package.json",
+                configPath,
+            );
+        }
     }
-  }
 
-  // Process extends
-  const processedConfig = await processExtends(rawConfig, configPath);
+    // Process extends
+    const processedConfig = await processExtends(rawConfig, configPath);
 
-  // Merge with defaults
-  const mergedConfig = options.defaults
-    ? mergeConfigs(options.defaults, processedConfig)
-    : processedConfig;
+    // Merge with defaults
+    const mergedConfig = options.defaults
+        ? mergeConfigs(options.defaults, processedConfig)
+        : processedConfig;
 
-  // Validate if requested
-  if (options.validate !== false) {
-    try {
-      const schema = options.partial ? configSchema.partial() : configSchema;
-      return schema.parse(mergedConfig) as MonorepoConfig;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ConfigValidationError(error.issues, configPath);
-      }
-      throw new ConfigLoaderError(
-        'Configuration validation failed',
-        configPath,
-        error
-      );
+    // Validate if requested
+    if (options.validate !== false) {
+        try {
+            const schema = options.partial ? configSchema.partial() : configSchema;
+            return schema.parse(mergedConfig) as MonorepoConfig;
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                throw new ConfigValidationError(error.issues, configPath);
+            }
+            throw new ConfigLoaderError(
+                "Configuration validation failed",
+                configPath,
+                error,
+            );
+        }
     }
-  }
 
-  return mergedConfig as MonorepoConfig;
+    return mergedConfig as MonorepoConfig;
 }
 
 /**
  * Load configuration synchronously (JSON only)
  */
 export function loadConfigSync(
-  options: LoadConfigOptions = {}
+    options: LoadConfigOptions = {},
 ): MonorepoConfig {
-  const configPath = resolveConfigPath(options);
+    const configPath = resolveConfigPath(options);
 
-  if (!configPath) {
-    if (options.defaults) {
-      return configSchema.parse(options.defaults);
+    if (!configPath) {
+        if (options.defaults) {
+            return configSchema.parse(options.defaults);
+        }
+        throw new ConfigLoaderError("No configuration file found");
     }
-    throw new ConfigLoaderError('No configuration file found');
-  }
 
-  // Only support JSON for sync loading
-  if (!configPath.endsWith('.json')) {
-    throw new ConfigLoaderError(
-      'Synchronous loading only supports JSON configuration files',
-      configPath
-    );
-  }
-
-  const content = readFileSync(configPath, 'utf-8');
-  let rawConfig: unknown;
-
-  try {
-    rawConfig = JSON.parse(content) as unknown;
-  } catch (error) {
-    throw new ConfigLoaderError(
-      'Failed to parse JSON configuration',
-      configPath,
-      error
-    );
-  }
-
-  // Handle package.json special case
-  if (configPath.endsWith('package.json')) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    rawConfig = (rawConfig as any).monorepo as unknown;
-    if (!rawConfig) {
-      throw new ConfigLoaderError(
-        'No "monorepo" field found in package.json',
-        configPath
-      );
+    // Only support JSON for sync loading
+    if (!configPath.endsWith(".json")) {
+        throw new ConfigLoaderError(
+            "Synchronous loading only supports JSON configuration files",
+            configPath,
+        );
     }
-  }
 
-  // Note: Cannot process extends in sync mode
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-  if ((rawConfig as any)?.extends) {
-    throw new ConfigLoaderError(
-      'Configuration extends is not supported in synchronous mode',
-      configPath
-    );
-  }
+    const content = readFileSync(configPath, "utf-8");
+    let rawConfig: unknown;
 
-  // Merge with defaults
-  const mergedConfig = options.defaults
-    ? mergeConfigs(options.defaults, rawConfig as Partial<MonorepoConfig>)
-    : (rawConfig as Partial<MonorepoConfig>);
-
-  // Validate if requested
-  if (options.validate !== false) {
     try {
-      const schema = options.partial ? configSchema.partial() : configSchema;
-      return schema.parse(mergedConfig) as MonorepoConfig;
+        rawConfig = JSON.parse(content) as unknown;
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ConfigValidationError(error.issues, configPath);
-      }
-      throw new ConfigLoaderError(
-        'Configuration validation failed',
-        configPath,
-        error
-      );
+        throw new ConfigLoaderError(
+            "Failed to parse JSON configuration",
+            configPath,
+            error,
+        );
     }
-  }
 
-  return mergedConfig as MonorepoConfig;
+    // Handle package.json special case
+    if (configPath.endsWith("package.json")) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        rawConfig = (rawConfig as any).monorepo as unknown;
+        if (!rawConfig) {
+            throw new ConfigLoaderError(
+                "No \"monorepo\" field found in package.json",
+                configPath,
+            );
+        }
+    }
+
+    // Note: Cannot process extends in sync mode
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    if ((rawConfig as any)?.extends) {
+        throw new ConfigLoaderError(
+            "Configuration extends is not supported in synchronous mode",
+            configPath,
+        );
+    }
+
+    // Merge with defaults
+    const mergedConfig = options.defaults
+        ? mergeConfigs(options.defaults, rawConfig as Partial<MonorepoConfig>)
+        : (rawConfig as Partial<MonorepoConfig>);
+
+    // Validate if requested
+    if (options.validate !== false) {
+        try {
+            const schema = options.partial ? configSchema.partial() : configSchema;
+            return schema.parse(mergedConfig) as MonorepoConfig;
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                throw new ConfigValidationError(error.issues, configPath);
+            }
+            throw new ConfigLoaderError(
+                "Configuration validation failed",
+                configPath,
+                error,
+            );
+        }
+    }
+
+    return mergedConfig as MonorepoConfig;
 }
 
 /**
  * Configuration manager singleton
  */
 export class ConfigManager {
-  private static instance: ConfigManager;
-  private config?: MonorepoConfig;
-  private configPath?: string;
+    private static instance: ConfigManager;
+    private config?: MonorepoConfig;
+    private configPath?: string;
 
-  private constructor() {}
+    private constructor() {}
 
-  static getInstance(): ConfigManager {
-    if (!ConfigManager.instance) {
-      ConfigManager.instance = new ConfigManager();
+    static getInstance(): ConfigManager {
+        if (!ConfigManager.instance) {
+            ConfigManager.instance = new ConfigManager();
+        }
+        return ConfigManager.instance;
     }
-    return ConfigManager.instance;
-  }
 
-  /**
-   * Initialize configuration
-   */
-  async init(options: LoadConfigOptions = {}): Promise<MonorepoConfig> {
-    this.config = await loadConfig(options);
-    this.configPath = resolveConfigPath(options);
-    return this.config;
-  }
-
-  /**
-   * Get current configuration
-   */
-  getConfig(): MonorepoConfig {
-    if (!this.config) {
-      throw new ConfigLoaderError('Configuration not initialized');
+    /**
+     * Initialize configuration
+     */
+    async init(options: LoadConfigOptions = {}): Promise<MonorepoConfig> {
+        this.config = await loadConfig(options);
+        this.configPath = resolveConfigPath(options);
+        return this.config;
     }
-    return this.config;
-  }
 
-  /**
-   * Get configuration file path
-   */
-  getConfigPath(): string | undefined {
-    return this.configPath;
-  }
-
-  /**
-   * Update configuration
-   */
-  updateConfig(updates: Partial<MonorepoConfig>): MonorepoConfig {
-    if (!this.config) {
-      throw new ConfigLoaderError('Configuration not initialized');
+    /**
+     * Get current configuration
+     */
+    getConfig(): MonorepoConfig {
+        if (!this.config) {
+            throw new ConfigLoaderError("Configuration not initialized");
+        }
+        return this.config;
     }
-    this.config = mergeConfigs(this.config, updates);
-    return this.config;
-  }
 
-  /**
-   * Reset configuration
-   */
-  reset(): void {
-    this.config = undefined;
-    this.configPath = undefined;
-  }
+    /**
+     * Get configuration file path
+     */
+    getConfigPath(): string | undefined {
+        return this.configPath;
+    }
+
+    /**
+     * Update configuration
+     */
+    updateConfig(updates: Partial<MonorepoConfig>): MonorepoConfig {
+        if (!this.config) {
+            throw new ConfigLoaderError("Configuration not initialized");
+        }
+        this.config = mergeConfigs(this.config, updates);
+        return this.config;
+    }
+
+    /**
+     * Reset configuration
+     */
+    reset(): void {
+        this.config = undefined;
+        this.configPath = undefined;
+    }
 }

@@ -1,12 +1,12 @@
-import { makeUnbuildConfig } from "@rad/build-configs/unbuild";
+import { makeUnbuildConfig } from "@adddog/build-configs/unbuild";
 
 export default makeUnbuildConfig({
-  "entries": [
-    "src/cli",
-    "src/index"
-  ],
-  "declaration": true,
-  "rollup": {
-    "emitCJS": true
-  }
+    entries: [
+        "src/cli",
+        "src/index",
+    ],
+    declaration: true,
+    rollup: {
+        emitCJS: true,
+    },
 });

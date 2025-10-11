@@ -1,70 +1,70 @@
-import { $ } from 'zx';
-import type { TazeConfig } from '../config/schema.js';
-import { logger } from '../utils/logger.js';
-import { existsSync } from 'node:fs';
+import type { TazeConfig } from "../config/schema.js";
+import { existsSync } from "node:fs";
+import { $ } from "zx";
+import { logger } from "../utils/logger.js";
 
 /**
  * Run taze command with optional config file
  */
-export interface TazeRunOptions {
-  /** Taze configuration from config file */
-  config?: TazeConfig;
+interface TazeRunOptions {
+    /** Taze configuration from config file */
+    config?: TazeConfig;
 
-  /** Additional CLI arguments to pass to taze */
-  args?: string[];
+    /** Additional CLI arguments to pass to taze */
+    args?: string[];
 
-  /** Working directory */
-  cwd?: string;
+    /** Working directory */
+    cwd?: string;
 
-  /** Whether to capture output */
-  silent?: boolean;
+    /** Whether to capture output */
+    silent?: boolean;
 }
 
 /**
  * Run taze with the configured runner and config file
  */
 export async function runTaze(options: TazeRunOptions = {}): Promise<void> {
-  const {
-    config,
-    args = [],
-    cwd = process.cwd(),
-    silent = false
-  } = options;
+    const {
+        config,
+        args = [],
+        cwd = process.cwd(),
+        silent = false,
+    } = options;
 
-  // Use configured runner or default to npx
-  const runner = config?.runner || 'npx';
+    // Use configured runner or default to npx
+    const runner = config?.runner || "npx";
 
-  // Build command arguments
-  const commandArgs = ['taze'];
+    // Build command arguments
+    const commandArgs = ["taze"];
 
-  // Add cwd option if specified
-  if (cwd && cwd !== process.cwd()) {
-    commandArgs.push('--cwd', cwd);
-  }
+    // Add cwd option if specified
+    if (cwd && cwd !== process.cwd()) {
+        commandArgs.push("--cwd", cwd);
+    }
 
-  // Add config file if specified and exists
-  if (config?.configPath && existsSync(config.configPath)) {
-    logger.debug(`Using taze config: ${config.configPath}`);
+    // Add config file if specified and exists
+    if (config?.configPath && existsSync(config.configPath)) {
+        logger.debug(`Using taze config: ${config.configPath}`);
     // Taze doesn't have a --config flag, it uses cosmiconfig
     // So we need to run from the directory containing the config
     // or rely on taze's auto-discovery
-  }
+    }
 
-  // Add any additional arguments
-  commandArgs.push(...args);
+    // Add any additional arguments
+    commandArgs.push(...args);
 
-  const command = `${runner} ${commandArgs.join(' ')}`;
-  logger.debug(`Running: ${command}`);
+    const command = `${runner} ${commandArgs.join(" ")}`;
+    logger.debug(`Running: ${command}`);
 
-  try {
+    try {
     // Configure zx
-    $.cwd = cwd;
-    $.verbose = !silent;
+        $.cwd = cwd;
+        $.verbose = !silent;
 
-    // Execute command
-    await $`${runner} ${commandArgs}`;
-  } catch (error: any) {
-    logger.error(`Taze command failed: ${error.message}`);
-    throw error;
-  }
+        // Execute command
+        await $`${runner} ${commandArgs}`;
+    } catch (error: any) {
+        logger.error(`Taze command failed: ${error.message}`);
+        throw error;
+    }
 }
