@@ -218,7 +218,7 @@ const report = async (options: ReportOptions): Promise<void> => {
 };
 
 // Export functions individually for use by other domains
-export { check, fix, update, report };
+export { check, fix, report, update };
 
 // Export handler object for consistency with command structure
 export const depsHandler = {
