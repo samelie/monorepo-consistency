@@ -5,7 +5,7 @@
         "esModuleInterop": true,
         "verbatimModuleSyntax": true,
         "skipDefaultLibCheck": true,
-        "exactOptionalPropertyTypes": true,
+        "exactOptionalPropertyTypes": false,
         "noUncheckedIndexedAccess": true,
         "noErrorTruncation": true,
         "traceResolution": false,
@@ -32,6 +32,13 @@
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
         "paths": {
+            "@adddog/build-configs/*": [
+                "./packages/publish/src/*",
+                "../publish/src/*",
+                "../packages/publish/src/*",
+                "../../packages/publish/src/*",
+                "../../../packages/publish/src/*"
+            ],
             "@rad/config/*": [
                 "./packages/config/*",
                 "../config/*",

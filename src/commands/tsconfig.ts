@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Command, Option } from "commander";
 import { tsconfigHandler } from "../domains/tsconfig/index.js";
 import { logger } from "../utils/logger.js";
@@ -16,7 +17,7 @@ function formatIssues(result: { success: boolean; issues: Array<{ severity: stri
         if (!acc[issue.severity]) {
             acc[issue.severity] = [];
         }
-        acc[issue.severity].push(issue);
+        acc[issue.severity]!.push(issue);
         return acc;
     }, {} as Record<string, typeof result.issues>);
 

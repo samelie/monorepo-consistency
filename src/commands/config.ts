@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Command, Option } from "commander";
 import { configHandler } from "../domains/config/index.js";
 import { logger } from "../utils/logger.js";

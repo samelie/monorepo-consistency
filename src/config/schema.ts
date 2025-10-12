@@ -1,4 +1,5 @@
 import { isAbsolute, resolve } from "node:path";
+import process from "node:process";
 import { z } from "zod/v4";
 
 /**
@@ -256,6 +257,7 @@ export const configSchema = z.object({
 
 // Export inferred types
 export type MonorepoConfig = z.infer<typeof configSchema>;
+export type TazeConfig = z.infer<typeof tazeConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
 export type QualityConfig = z.infer<typeof qualityConfigSchema>;
 export type WorkspaceConfig = z.infer<typeof workspaceConfigSchema>;

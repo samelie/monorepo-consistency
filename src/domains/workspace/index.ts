@@ -81,8 +81,8 @@ const exec = async (command: string, options: WorkspaceExecOptions): Promise<voi
 
         // TODO: Execute command using pnpm -r exec or similar
         await execInWorkspace(command, [], {
-            cwd: options.cwd,
-            parallel: options.parallel,
+            ...(options.cwd !== undefined ? { cwd: options.cwd } : {}),
+            ...(options.parallel !== undefined ? { parallel: options.parallel } : {}),
         });
 
         spinner.succeed("Command executed");

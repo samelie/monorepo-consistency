@@ -44,10 +44,10 @@ const generate = async (
 
         const generateOptions: TsconfigGenerateOptions = {
             rootDir: workspace.root,
-            types: options.type ? [options.type] : undefined,
-            dryRun: options.dryRun,
-            force: options.force,
-            verbose: options.verbose,
+            ...(options.type ? { types: [options.type] } : {}),
+            ...(options.dryRun !== undefined ? { dryRun: options.dryRun } : {}),
+            ...(options.force !== undefined ? { force: options.force } : {}),
+            ...(options.verbose !== undefined ? { verbose: options.verbose } : {}),
         };
 
         const result = await generateTsconfigs(generateOptions);

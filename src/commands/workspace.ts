@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Command } from "commander";
 import { workspaceHandler } from "../domains/workspace/index.js";
 import { logger } from "../utils/logger.js";

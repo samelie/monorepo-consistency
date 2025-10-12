@@ -15,11 +15,6 @@ interface ConfigFixOptions extends CommandOptions {
     updateScripts?: boolean;
 }
 
-interface ConfigGenerateOptions extends CommandOptions {
-    force?: boolean;
-    template?: string;
-}
-
 // Pure functions for configuration operations
 
 const checkTypeScriptConfigs = async (_workspacePath: string): Promise<Issue[]> => {
@@ -48,7 +43,7 @@ const checkPackageJsonFiles = async (_workspacePath: string): Promise<Issue[]> =
     return [];
 };
 
-const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
+export const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
     const spinner = logger.spinner("Checking configurations...");
     spinner.start();
 
@@ -90,7 +85,7 @@ const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
     }
 };
 
-const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
+export const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
     const spinner = logger.spinner("Fixing configuration issues...");
     spinner.start();
 
@@ -121,29 +116,7 @@ const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
     }
 };
 
-const generate = async (type: ConfigType | undefined, _options: ConfigGenerateOptions): Promise<void> => {
-    const spinner = logger.spinner(`Generating ${type || "all"} configurations...`);
-    spinner.start();
-
-    try {
-        if (!type || type === "tsconfig") {
-            logger.debug("Generating TypeScript configurations...");
-            // TODO: Run generate-tsconfig logic
-        }
-
-        if (!type || type === "eslint") {
-            logger.debug("Generating ESLint configurations...");
-            // TODO: Generate ESLint configs
-        }
-
-        spinner.succeed("Configuration generation complete");
-    } catch (error) {
-        spinner.fail("Configuration generation failed");
-        throw error;
-    }
-};
-
-const validate = async (type: ConfigType, files: string[], _options: CommandOptions): Promise<void> => {
+export const validate = async (type: ConfigType, files: string[], _options: CommandOptions): Promise<void> => {
     const spinner = logger.spinner(`Validating ${type} configuration...`);
     spinner.start();
 
@@ -158,10 +131,15 @@ const validate = async (type: ConfigType, files: string[], _options: CommandOpti
     }
 };
 
+export const generate = async (_type: ConfigType | undefined, _options: CommandOptions & { force?: boolean; template?: string }): Promise<void> => {
+    // TODO: Implement config generation
+    throw new Error("Config generation not yet implemented");
+};
+
 // Export handler object for consistency with command structure
 export const configHandler = {
     check,
     fix,
-    generate,
     validate,
+    generate,
 };

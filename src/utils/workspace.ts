@@ -2,6 +2,7 @@ import type { PackageInfo, WorkspaceInfo } from "../types/index.js";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import process from "node:process";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
@@ -119,5 +120,5 @@ export async function execInWorkspace(
     options: { cwd?: string; parallel?: boolean } = {},
 ): Promise<void> {
     // TODO: Implement using child_process or execa
-    console.log(`Would execute: ${command} ${args.join(" ")}`, options);
+    console.warn(`Would execute: ${command} ${args.join(" ")}`, options);
 }

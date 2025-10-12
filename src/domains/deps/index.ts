@@ -185,7 +185,7 @@ const update = async (options: DepsUpdateOptions): Promise<void> => {
 
         // Run taze from monorepo root
         await runTaze({
-            config: tazeConfig,
+            ...(tazeConfig ? { config: tazeConfig } : {}),
             args,
             cwd: workspace.root,
             silent: false,
@@ -216,6 +216,9 @@ const report = async (options: ReportOptions): Promise<void> => {
         throw error;
     }
 };
+
+// Export functions individually for use by other domains
+export { check, fix, update, report };
 
 // Export handler object for consistency with command structure
 export const depsHandler = {

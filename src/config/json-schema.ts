@@ -1,7 +1,9 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { zodToJsonSchema } from "zod-to-json-schema";
-import { configSchema } from "./schema.js";
+import process from "node:process";
+import { zodToJsonSchema } from "@adddog/zod-to-json-schema";
+import { ZodError } from "zod/v4";
+import { configSchema } from "./schema";
 
 /**
  * Generate JSON Schema from Zod schema
@@ -210,10 +212,8 @@ export function validateConfig(config: unknown): {
         configSchema.parse(config);
         return { valid: true };
     } catch (error) {
-        if (error instanceof Error && "issues" in error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const zodError = error as any;
-            const errors = zodError.issues.map((issue: any) => ({
+        if (error instanceof ZodError) {
+            const errors = error.issues.map(issue => ({
                 path: issue.path.join("."),
                 message: issue.message,
             }));

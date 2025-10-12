@@ -1,4 +1,4 @@
-import config from "@rad/config/knip.config";
+import config from "@rad/config/knip.config.js";
 
 export default {
     ...config,

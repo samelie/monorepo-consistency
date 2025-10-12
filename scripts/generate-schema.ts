@@ -2,6 +2,7 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import process from "node:process";
 import { zodToJsonSchema } from "@adddog/zod-to-json-schema";
 import { configSchema } from "../src/config/schema.js";
 

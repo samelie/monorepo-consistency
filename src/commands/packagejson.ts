@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Command } from "commander";
 import { packageJsonHandler } from "../domains/packagejson/index.js";
 import { logger } from "../utils/logger.js";

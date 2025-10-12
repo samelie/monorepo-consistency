@@ -26,6 +26,8 @@
     "knip": "knip",
     "dev": "tsx src/cli.ts",
     "generate-schema": "tsx scripts/generate-schema.ts",
+    "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run build",
+    "prepack": "pnpm run prepublishOnly",
     "build:watch": "unbuild --watch",
     "test": "vitest run"
   },

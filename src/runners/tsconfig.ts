@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, parse } from "node:path";
+import process from "node:process";
 import glob from "fast-glob";
 import { getTsconfig } from "get-tsconfig";
 import merge from "lodash/merge.js";
@@ -27,7 +28,7 @@ function extractDependencies(packageJsonPath: string): Set<string> {
                 dependencies.add(dep);
             }
         }
-    } catch (error) {
+    } catch {
     // If we can't read package.json, return empty set
     // This will result in no filtering
     }

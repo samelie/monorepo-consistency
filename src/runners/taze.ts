@@ -1,5 +1,6 @@
 import type { TazeConfig } from "../config/schema.js";
 import { existsSync } from "node:fs";
+import process from "node:process";
 import { $ } from "zx";
 import { logger } from "../utils/logger.js";
 
@@ -63,8 +64,9 @@ export async function runTaze(options: TazeRunOptions = {}): Promise<void> {
 
         // Execute command
         await $`${runner} ${commandArgs}`;
-    } catch (error: any) {
-        logger.error(`Taze command failed: ${error.message}`);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error(`Taze command failed: ${message}`);
         throw error;
     }
 }

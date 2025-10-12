@@ -1,6 +1,7 @@
 import type { MonorepoConfig } from "./schema.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, resolve } from "node:path";
+import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { z } from "zod/v3";
 import { configSchema } from "./schema.js";
@@ -64,6 +65,20 @@ export interface LoadConfigOptions {
     partial?: boolean;
     /** Merge with default configuration */
     defaults?: Partial<MonorepoConfig>;
+}
+
+/**
+ * Type guard to check if value is an object with extends property
+ */
+function hasExtendsProperty(value: unknown): value is { extends?: string | string[] } & Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+/**
+ * Type guard to check if value is a package.json with monorepo field
+ */
+function hasMonorepoField(value: unknown): value is { monorepo: unknown } {
+    return typeof value === "object" && value !== null && "monorepo" in value;
 }
 
 /**
@@ -189,12 +204,14 @@ function resolveConfigPath(options: LoadConfigOptions): string | undefined {
 
 /**
  * Merge configuration objects deeply
+ * Note: Uses type assertion because spreading creates compatible but not identical optional property types
  */
 function mergeConfigs(
     base: Partial<MonorepoConfig>,
     ...configs: Array<Partial<MonorepoConfig>>
 ): MonorepoConfig {
-    let result: any = { ...base };
+    // Start with base config - we know it's at least a Partial<MonorepoConfig>
+    let result = { ...base } as Partial<MonorepoConfig>;
 
     for (const config of configs) {
         result = {
@@ -218,7 +235,7 @@ function mergeConfigs(
             ...(result.health || config.health ? { health: { ...result.health, ...config.health } } : {}),
             ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
             ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
-        };
+        } as Partial<MonorepoConfig>;
     }
 
     return result as MonorepoConfig;
@@ -231,8 +248,12 @@ async function processExtends(
     config: unknown,
     basePath: string,
 ): Promise<Partial<MonorepoConfig>> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    const extendsValue = (config as any)?.extends as string | string[] | undefined;
+    // Use type guard to safely access extends property
+    if (!hasExtendsProperty(config)) {
+        return config as Partial<MonorepoConfig>;
+    }
+
+    const extendsValue = config.extends;
 
     if (!extendsValue) {
         return config as Partial<MonorepoConfig>;
@@ -254,8 +275,8 @@ async function processExtends(
         parentConfigs.push(parentConfig);
     }
 
-    // Remove extends from current config
-    const { extends: _, ...currentConfig } = config as Record<string, unknown>;
+    // Remove extends from current config - we know config is an object with extends at this point
+    const { extends: _, ...currentConfig } = config;
 
     // Merge in order: parent configs, then current config
     return mergeConfigs({}, ...parentConfigs, currentConfig as Partial<MonorepoConfig>);
@@ -281,14 +302,13 @@ export async function loadConfig(
 
     // Handle package.json special case
     if (configPath.endsWith("package.json")) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        rawConfig = (rawConfig as any).monorepo as unknown;
-        if (!rawConfig) {
+        if (!hasMonorepoField(rawConfig)) {
             throw new ConfigLoaderError(
                 "No \"monorepo\" field found in package.json",
                 configPath,
             );
         }
+        rawConfig = rawConfig.monorepo;
     }
 
     // Process extends
@@ -357,19 +377,17 @@ export function loadConfigSync(
 
     // Handle package.json special case
     if (configPath.endsWith("package.json")) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        rawConfig = (rawConfig as any).monorepo as unknown;
-        if (!rawConfig) {
+        if (!hasMonorepoField(rawConfig)) {
             throw new ConfigLoaderError(
                 "No \"monorepo\" field found in package.json",
                 configPath,
             );
         }
+        rawConfig = rawConfig.monorepo;
     }
 
     // Note: Cannot process extends in sync mode
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    if ((rawConfig as any)?.extends) {
+    if (hasExtendsProperty(rawConfig) && rawConfig.extends) {
         throw new ConfigLoaderError(
             "Configuration extends is not supported in synchronous mode",
             configPath,
@@ -423,7 +441,10 @@ export class ConfigManager {
      */
     async init(options: LoadConfigOptions = {}): Promise<MonorepoConfig> {
         this.config = await loadConfig(options);
-        this.configPath = resolveConfigPath(options);
+        const resolvedPath = resolveConfigPath(options);
+        if (resolvedPath !== undefined) {
+            this.configPath = resolvedPath;
+        }
         return this.config;
     }
 

@@ -2,6 +2,8 @@
  * Configuration module exports
  */
 
+/* eslint-disable no-barrel-files/no-barrel-files */
+
 export {
     createConfigTemplate,
     generateJsonSchema,

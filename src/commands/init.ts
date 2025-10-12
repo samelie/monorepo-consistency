@@ -1,5 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import process from "node:process";
 import { Command } from "commander";
 import { question } from "zx";
 import { createConfigTemplate } from "../config/json-schema.js";
