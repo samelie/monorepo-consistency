@@ -39,7 +39,7 @@
         "noEmit": false
     },
     "paths": {
-        "@rad/eslint-plugin-rules": [
+        "@adddog/eslint-plugin-rules": [
             "./packages/eslint-plugin-rules",
             "../eslint-plugin-rules",
             "../packages/eslint-plugin-rules",
