@@ -46,7 +46,7 @@
                 "../../packages/config/*",
                 "../../../packages/config/*"
             ],
-            "@rad/eslint": [
+            "@adddog/eslint": [
                 "./packages/eslint",
                 "../eslint",
                 "../packages/eslint",

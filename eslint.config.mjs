@@ -1,3 +1,3 @@
-import config from "@rad/eslint";
+import config from "@adddog/eslint";
 
 export default config();
