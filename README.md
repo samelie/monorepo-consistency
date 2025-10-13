@@ -1,4 +1,4 @@
-# @domain/monorepo-consistency
+# @adddog/monorepo-consistency
 
 A tool for maintaining consistency across a pnpm monorepo, including automated TypeScript configuration generation.
 
