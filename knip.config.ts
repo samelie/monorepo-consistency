@@ -1,4 +1,4 @@
-import config from "@rad/config/knip.config.js";
+import config from "@adddog/config-defaults/knip.config.js";
 
 export default {
     ...config,
