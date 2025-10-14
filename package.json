@@ -52,12 +52,14 @@
     "@rad/config": "workspace:*",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.7.2",
-    "@vue/compiler-sfc": "^3.5.22",
     "bumpp": "^10.3.1",
     "eslint": "^9.37.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1"
+  },
+  "peerDependencies": {
+    "@vue/compiler-sfc": "^3.5.22"
   },
   "engines": {
     "node": ">= 22",
