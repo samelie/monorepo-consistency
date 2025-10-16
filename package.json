@@ -25,7 +25,7 @@
     "types": "tsc -p tsconfig.typecheck.json",
     "knip": "knip",
     "dev": "tsx src/cli.ts",
-    "release": "bumpp --yes --no-push --release patch",
+    "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
     "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
