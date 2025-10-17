@@ -96,7 +96,7 @@ mono tsconfig validate
 mono tsconfig validate --strict
 
 # Validate specific files
-mono tsconfig validate packages/design-system/tsconfig.json
+mono tsconfig validate packages/shadcn-vue-design-system/tsconfig.json
 ```
 
 ## TypeScript Configuration Generation
@@ -181,7 +181,7 @@ Without these marker files, the generator will skip the package entirely.
 Create `web.tsconfig.json` in your package root:
 
 ```json
-// packages/design-system/web.tsconfig.json
+// packages/shadcn-vue-design-system/web.tsconfig.json
 {
   "compilerOptions": {
     "baseUrl": ".",
@@ -247,7 +247,7 @@ your-package/
 
 | Package Type | Marker File | Example Packages |
 |--------------|-------------|------------------|
-| Frontend (Vite/Vue/React) | `web.tsconfig.json` | `packages/design-system`, `park-app/apps/webui` |
+| Frontend (Vite/Vue/React) | `web.tsconfig.json` | `packages/shadcn-vue-design-system`, `park-app/apps/webui` |
 | Backend (Fastify/Express) | `node.tsconfig.json` | `park-app/apps/backend`, `ai-agents` |
 | CLI Tools | `node.tsconfig.json` | `monorepo-scripts`, `kubernetes/kubectl-debug` |
 | Shared Libraries (Node) | `node.tsconfig.json` | `packages/logging`, `packages/env` |
@@ -356,7 +356,7 @@ Here's a real-world example showing what gets generated:
 
 #### Input Files
 
-**`packages/design-system/package.json`:**
+**`packages/shadcn-vue-design-system/package.json`:**
 ```json
 {
   "name": "@domain/design-system",
@@ -370,7 +370,7 @@ Here's a real-world example showing what gets generated:
 }
 ```
 
-**`packages/design-system/web.tsconfig.json`** (marker file):
+**`packages/shadcn-vue-design-system/web.tsconfig.json`** (marker file):
 ```json
 {
   "compilerOptions": {
@@ -415,7 +415,7 @@ Here's a real-world example showing what gets generated:
 
 #### Generated Output
 
-**`packages/design-system/tsconfig.json`** (auto-generated):
+**`packages/shadcn-vue-design-system/tsconfig.json`** (auto-generated):
 ```json
 {
   "compilerOptions": {
@@ -466,7 +466,7 @@ Here's a real-world example showing what gets generated:
 - ✅ Only 3 `@domain/*` paths (matching package.json dependencies)
 - ❌ 12+ other `@domain/*` paths filtered out
 
-**`packages/design-system/tsconfig.typecheck.json`** (auto-generated):
+**`packages/shadcn-vue-design-system/tsconfig.typecheck.json`** (auto-generated):
 ```json
 {
   "extends": "./tsconfig.json",
@@ -558,7 +558,7 @@ MEDIUM:
     Fix: Run: mono tsconfig generate
 
 LOW:
-  [missing-typecheck-config] packages/design-system/tsconfig.typecheck.json: Missing typecheck configuration
+  [missing-typecheck-config] packages/shadcn-vue-design-system/tsconfig.typecheck.json: Missing typecheck configuration
     Fix: Run: mono tsconfig generate
 
 Summary: 2 issue(s) - Critical: 0, High: 0, Medium: 1, Low: 1
@@ -598,7 +598,7 @@ In strict mode, additional checks are performed:
 
 **Validate specific files:**
 ```bash
-mono tsconfig validate packages/design-system/tsconfig.json park-app/apps/webui/tsconfig.json
+mono tsconfig validate packages/shadcn-vue-design-system/tsconfig.json park-app/apps/webui/tsconfig.json
 ```
 
 ## Practical Workflows
