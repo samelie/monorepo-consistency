@@ -51,7 +51,7 @@
     "@adddog/eslint": "workspace:*",
     "@rad/config": "workspace:*",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^24.8.0",
+    "@types/node": "^24.8.1",
     "bumpp": "^10.3.1",
     "eslint": "^9.37.0",
     "tsx": "^4.20.6",
