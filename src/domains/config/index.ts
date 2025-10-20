@@ -116,7 +116,7 @@ export const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
     }
 };
 
-export const validate = async (type: ConfigType, files: string[], _options: CommandOptions): Promise<void> => {
+const validate = async (type: ConfigType, files: string[], _options: CommandOptions): Promise<void> => {
     const spinner = logger.spinner(`Validating ${type} configuration...`);
     spinner.start();
 
@@ -131,7 +131,7 @@ export const validate = async (type: ConfigType, files: string[], _options: Comm
     }
 };
 
-export const generate = async (_type: ConfigType | undefined, _options: CommandOptions & { force?: boolean; template?: string }): Promise<void> => {
+const generate = async (_type: ConfigType | undefined, _options: CommandOptions & { force?: boolean; template?: string }): Promise<void> => {
     // TODO: Implement config generation
     throw new Error("Config generation not yet implemented");
 };
