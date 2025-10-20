@@ -26,7 +26,7 @@ describe("config loader", () => {
             });
 
             expect(config.version).toBe("1.0.0");
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
         });
 
         it("should load config from specific path", async () => {
@@ -71,7 +71,7 @@ describe("config loader", () => {
             });
 
             expect(config.version).toBe("1.0.0");
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
         });
 
         it("should throw when package.json has no monorepo field", async () => {
@@ -99,7 +99,7 @@ describe("config loader", () => {
             // Create base config
             await workspace.writeJSON("base.config.json", {
                 version: "1.0.0",
-                workspace: { packageManager: "pnpm" },
+                deps: { checkUnused: true },
                 packageJson: {
                     scripts: {
                         required: { test: "vitest" },
@@ -122,7 +122,7 @@ describe("config loader", () => {
             });
 
             // Should have both base and extended values
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
             expect(config.packageJson?.scripts?.required).toEqual({
                 lint: "eslint .",
             });
@@ -133,7 +133,7 @@ describe("config loader", () => {
 
             await workspace.writeJSON("base1.json", {
                 version: "1.0.0",
-                workspace: { packageManager: "pnpm" },
+                deps: { checkUnused: true },
             });
 
             await workspace.writeJSON("base2.json", {
@@ -156,7 +156,7 @@ describe("config loader", () => {
                 configPath: workspace.path("extended.json"),
             });
 
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
             expect(config.packageJson?.scripts?.required).toEqual({ test: "vitest" });
             expect(config.deps?.taze?.runner).toBe("npx");
         });
@@ -197,7 +197,7 @@ describe("config loader", () => {
                 },
             });
 
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
             expect(config.deps?.taze?.runner).toBe("npx");
         });
 
@@ -227,13 +227,13 @@ describe("config loader", () => {
             });
 
             expect(config.version).toBe("1.0.0");
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
             expect(config.packageJson?.scripts?.required).toEqual({
                 test: "vitest",
                 lint: "eslint .",
             });
             expect(config.deps?.taze?.runner).toBe("npx");
-            expect(config.quality?.linting?.enabled).toBe(true);
+            expect(config.packageJson?.autoFix?.addMissingScripts).toBe(true);
         });
     });
 
@@ -248,7 +248,7 @@ describe("config loader", () => {
             });
 
             expect(config.version).toBe("1.0.0");
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
         });
 
         it("should throw for non-JSON files", async () => {
@@ -303,7 +303,7 @@ describe("config loader", () => {
 
             const config = manager.getConfig();
             expect(config.version).toBe("1.0.0");
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
         });
 
         it("should throw when getting config before init", () => {
@@ -328,7 +328,7 @@ describe("config loader", () => {
             });
 
             const config = manager.getConfig();
-            expect(config.workspace?.packageManager).toBe("pnpm");
+            expect(config.deps?.checkUnused).toBe(true);
             expect(config.deps?.taze?.runner).toBe("npx");
         });
 

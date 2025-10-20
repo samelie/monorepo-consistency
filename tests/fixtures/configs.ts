@@ -2,8 +2,10 @@ import type { MonorepoConfig } from "@rad/..";
 
 export const minimalConfig: Partial<MonorepoConfig> = {
     version: "1.0.0",
-    workspace: {
-        packageManager: "pnpm",
+    deps: {
+        checkUnused: true,
+        checkMissing: true,
+        checkVersionMismatch: true,
     },
 };
 
@@ -71,9 +73,6 @@ export const depsConfig: Partial<MonorepoConfig> = {
 
 export const fullConfig: Partial<MonorepoConfig> = {
     version: "1.0.0",
-    workspace: {
-        packageManager: "pnpm",
-    },
     packageJson: {
         scripts: {
             enforce: true,
@@ -103,18 +102,6 @@ export const fullConfig: Partial<MonorepoConfig> = {
     deps: {
         taze: {
             runner: "npx",
-        },
-    },
-    quality: {
-        linting: {
-            enabled: true,
-        },
-        typeChecking: {
-            enabled: true,
-        },
-        testing: {
-            enabled: true,
-            coverage: false,
         },
     },
 };

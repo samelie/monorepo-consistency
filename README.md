@@ -1,6 +1,6 @@
 # @adddog/monorepo-consistency
 
-A tool for maintaining consistency across a pnpm monorepo, including automated TypeScript configuration generation.
+A tool for maintaining consistency across a pnpm monorepo, including automated TypeScript configuration generation and package.json hygiene checks.
 
 ## Quick Start
 
@@ -24,9 +24,6 @@ The `init` command creates a complete `monorepo.config.json` file with sensible 
 - Dependency management
 - TypeScript configuration generation
 - Package.json hygiene checks
-- Code quality checks
-- Workspace settings
-- Health checks
 
 ## Commands
 
@@ -47,17 +44,12 @@ mono init --force
 ```
 
 **Interactive mode** asks for:
-- Package manager (pnpm/npm/yarn)
-- Workspace patterns
 - Enable/disable TypeScript config generation
 - Enable/disable package.json hygiene checks
-- Enable/disable quality checks
 - Enable/disable dependency checks
 - Taze runner preference
 
 **Defaults mode** creates a complete configuration with:
-- pnpm as package manager
-- `packages/*` and `apps/*` workspace patterns
 - All checks enabled
 - Recommended scripts for build, lint, types, test
 - Node >= 22, pnpm >= 10 engine requirements
@@ -483,7 +475,7 @@ Here's a real-world example showing what gets generated:
 
 ## Configuration
 
-You can configure the TypeScript config generation behavior via a `monorepo.config.json` file:
+You can configure the tool's behavior via a `monorepo.config.json` file:
 
 ```json
 {
@@ -511,6 +503,25 @@ You can configure the TypeScript config generation behavior via a `monorepo.conf
       "checkConsistency": true,
       "strictMode": false
     }
+  },
+  "packageJson": {
+    "enabled": true,
+    "scripts": {
+      "enforce": false,
+      "required": {
+        "build": "unbuild",
+        "lint": "eslint .",
+        "types": "tsc -p tsconfig.typecheck.json"
+      }
+    },
+    "fields": {
+      "required": ["name", "version"]
+    }
+  },
+  "deps": {
+    "checkUnused": true,
+    "checkMissing": true,
+    "checkVersionMismatch": true
   }
 }
 ```

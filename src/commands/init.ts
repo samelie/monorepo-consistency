@@ -15,17 +15,6 @@ interface InitOptions {
 async function promptForConfig() {
     logger.info("Welcome to monorepo-consistency configuration setup!\n");
 
-    // Package manager
-    const packageManager = await question(
-        "Package manager (pnpm/npm/yarn)? [pnpm]: ",
-        { choices: ["pnpm", "npm", "yarn"] },
-    );
-
-    // Workspace patterns
-    const workspacePatterns = await question(
-        "Workspace patterns (comma-separated)? [packages/*,apps/*]: ",
-    );
-
     // TypeScript config generation
     const enableTsconfig = await question(
         "Enable TypeScript config generation? [Y/n]: ",
@@ -34,11 +23,6 @@ async function promptForConfig() {
     // Package.json hygiene
     const enablePackageJson = await question(
         "Enable package.json hygiene checks? [Y/n]: ",
-    );
-
-    // Quality checks
-    const enableQuality = await question(
-        "Enable code quality checks (linting, type checking)? [Y/n]: ",
     );
 
     // Dependency checks
@@ -56,13 +40,6 @@ async function promptForConfig() {
     const config = {
         $schema: "./monorepo.schema.json",
         version: "1.0.0",
-        workspace: {
-            packageManager: packageManager.trim() || "pnpm",
-            workspacePatterns: workspacePatterns.trim()
-                ? workspacePatterns.split(",").map(p => p.trim())
-                : ["packages/*", "apps/*"],
-            ignoredWorkspaces: [],
-        },
         deps: {
             taze: {
                 runner: (tazeRunner.trim() || "pnpx") as "npx" | "pnpx" | "yarn" | "bunx",
@@ -144,31 +121,6 @@ async function promptForConfig() {
                 removeInvalidFields: false,
             },
         },
-        quality: {
-            linting: {
-                enabled: isYes(enableQuality),
-                fix: false,
-            },
-            typeChecking: {
-                enabled: isYes(enableQuality),
-                strict: true,
-            },
-            testing: {
-                enabled: isYes(enableQuality),
-                coverage: false,
-                minCoverage: 80,
-            },
-        },
-        catalog: {
-            enabled: false,
-            categories: [],
-            generateDocs: false,
-        },
-        health: {
-            checks: ["dependencies", "quality"],
-            failFast: false,
-            reportFormat: "markdown" as const,
-        },
         ci: {
             enabled: false,
             failOnWarning: false,
@@ -226,7 +178,8 @@ export function createInitCommand(): Command {
                 logger.info("\nNext steps:");
                 logger.info("  1. Review and customize monorepo.config.json");
                 logger.info("  2. Run: mono schema --format json  (to generate JSON schema)");
-                logger.info("  3. Run: mono health check  (to check your monorepo health)");
+                logger.info("  3. Run: mono tsconfig generate  (to generate TypeScript configs)");
+                logger.info("  4. Run: mono packagejson check  (to check package.json hygiene)");
             } catch (error) {
                 logger.error(`Failed to initialize configuration: ${String(error)}`);
                 process.exit(1);

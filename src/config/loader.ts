@@ -219,20 +219,8 @@ function mergeConfigs(
             ...config,
             // Deep merge for nested objects
             ...(result.deps || config.deps ? { deps: { ...result.deps, ...config.deps } } : {}),
-            ...(result.quality || config.quality
-                ? {
-                        quality: {
-                            ...result.quality,
-                            ...config.quality,
-                            ...(result.quality?.linting || config.quality?.linting ? { linting: { ...result.quality?.linting, ...config.quality?.linting } } : {}),
-                            ...(result.quality?.typeChecking || config.quality?.typeChecking ? { typeChecking: { ...result.quality?.typeChecking, ...config.quality?.typeChecking } } : {}),
-                            ...(result.quality?.testing || config.quality?.testing ? { testing: { ...result.quality?.testing, ...config.quality?.testing } } : {}),
-                        },
-                    }
-                : {}),
-            ...(result.workspace || config.workspace ? { workspace: { ...result.workspace, ...config.workspace } } : {}),
-            ...(result.catalog || config.catalog ? { catalog: { ...result.catalog, ...config.catalog } } : {}),
-            ...(result.health || config.health ? { health: { ...result.health, ...config.health } } : {}),
+            ...(result.tsconfig || config.tsconfig ? { tsconfig: { ...result.tsconfig, ...config.tsconfig } } : {}),
+            ...(result.packageJson || config.packageJson ? { packageJson: { ...result.packageJson, ...config.packageJson } } : {}),
             ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
             ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
         } as Partial<MonorepoConfig>;

@@ -22,12 +22,10 @@ export {
 } from "./loader.js";
 
 export {
-    type CatalogConfig,
     configSchema,
     type DepsConfig,
-    type HealthConfig,
     type MonorepoConfig,
-    type QualityConfig,
+    type PackageJsonConfig,
     type TazeConfig,
-    type WorkspaceConfig,
+    type TsconfigConfig,
 } from "./schema.js";

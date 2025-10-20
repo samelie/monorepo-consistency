@@ -4,13 +4,10 @@ import process from "node:process";
 import { Command } from "commander";
 import { createConfigCommand } from "./commands/config.js";
 import { createDepsCommand } from "./commands/deps.js";
-import { createHealthCommand } from "./commands/health.js";
 import { createInitCommand } from "./commands/init.js";
 import { createPackageJsonCommand } from "./commands/packagejson.js";
-import { createQualityCommand } from "./commands/quality.js";
 import { createSchemaCommand } from "./commands/schema.js";
 import { createTsconfigCommand } from "./commands/tsconfig.js";
-import { createWorkspaceCommand } from "./commands/workspace.js";
 import { ConfigManager } from "./config/loader.js";
 import { logger } from "./utils/logger.js";
 
@@ -38,9 +35,6 @@ program
 program.addCommand(createInitCommand());
 program.addCommand(createDepsCommand());
 program.addCommand(createConfigCommand());
-program.addCommand(createQualityCommand());
-program.addCommand(createHealthCommand());
-program.addCommand(createWorkspaceCommand());
 program.addCommand(createSchemaCommand());
 program.addCommand(createTsconfigCommand());
 program.addCommand(createPackageJsonCommand());
@@ -52,12 +46,11 @@ program.addHelpText(
 Examples:
   $ mono init                           # Initialize configuration interactively
   $ mono init --defaults                # Initialize with default configuration
-  $ mono health check                   # Quick health check
   $ mono deps check --all               # Check all dependency issues
   $ mono deps update -i                 # Interactive dependency updates
   $ mono tsconfig generate              # Generate TypeScript configs
   $ mono tsconfig generate --type=node  # Generate only node configs
-  $ mono workspace exec "pnpm build"    # Build all packages
+  $ mono packagejson check              # Check package.json hygiene
 
 Documentation:
   Visit https://github.com/rad/mono for full documentation

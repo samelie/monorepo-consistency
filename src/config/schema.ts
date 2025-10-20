@@ -90,71 +90,6 @@ const tsconfigConfigSchema = z.object({
 });
 
 /**
- * Code quality configuration
- */
-const qualityConfigSchema = z.object({
-    linting: z.object({
-        enabled: z.boolean().default(true).describe("Enable linting checks"),
-        fix: z.boolean().default(false).describe("Auto-fix linting issues"),
-        configPath: pathSchema.optional().describe("Path to ESLint config"),
-    }).optional(),
-    typeChecking: z.object({
-        enabled: z.boolean().default(true).describe("Enable type checking"),
-        strict: z.boolean().default(true).describe("Use strict TypeScript settings"),
-        configPath: pathSchema.optional().describe("Path to TypeScript config"),
-    }).optional(),
-    testing: z.object({
-        enabled: z.boolean().default(true).describe("Enable test running"),
-        coverage: z.boolean().default(false).describe("Collect coverage"),
-        minCoverage: z.number().min(0).max(100).default(80).describe("Minimum coverage percentage"),
-    }).optional(),
-});
-
-/**
- * Workspace configuration
- */
-const workspaceConfigSchema = z.object({
-    packageManager: z.enum(["pnpm", "npm", "yarn"]).default("pnpm").describe("Package manager"),
-    rootPath: pathSchema.optional().describe("Monorepo root path"),
-    workspacePatterns: z.array(z.string())
-        .default(["packages/*", "apps/*"])
-        .describe("Workspace package patterns"),
-    ignoredWorkspaces: z.array(z.string()).default([]).describe("Workspaces to ignore"),
-});
-
-/**
- * Package catalog configuration
- */
-const catalogConfigSchema = z.object({
-    enabled: z.boolean().default(false).describe("Enable package cataloging"),
-    categories: z.array(
-        z.object({
-            name: z.string().describe("Category name"),
-            pattern: z.string().describe("Pattern to match packages"),
-            description: z.string().optional().describe("Category description"),
-        }),
-    ).default([]).describe("Package categories"),
-    generateDocs: z.boolean().default(false).describe("Generate catalog documentation"),
-    outputPath: pathSchema.optional().describe("Path to output catalog"),
-});
-
-/**
- * Health check configuration
- */
-const healthConfigSchema = z.object({
-    checks: z.array(z.enum([
-        "dependencies",
-        "quality",
-        "build",
-        "tests",
-        "documentation",
-    ])).default(["dependencies", "quality"]).describe("Health checks to run"),
-    failFast: z.boolean().default(false).describe("Stop on first failure"),
-    reportFormat: z.enum(["json", "html", "markdown"]).default("markdown").describe("Report format"),
-    outputPath: pathSchema.optional().describe("Path to save health report"),
-});
-
-/**
  * Package.json hygiene configuration
  */
 const packageJsonConfigSchema = z.object({
@@ -224,10 +159,6 @@ export const configSchema = z.object({
     // Domain configurations
     deps: depsConfigSchema.optional().describe("Dependency management configuration"),
     tsconfig: tsconfigConfigSchema.optional().describe("TypeScript configuration management"),
-    quality: qualityConfigSchema.optional().describe("Code quality configuration"),
-    workspace: workspaceConfigSchema.optional().describe("Workspace configuration"),
-    catalog: catalogConfigSchema.optional().describe("Package catalog configuration"),
-    health: healthConfigSchema.optional().describe("Health check configuration"),
     packageJson: packageJsonConfigSchema.optional().describe("Package.json hygiene configuration"),
 
     // Global settings
@@ -259,7 +190,5 @@ export const configSchema = z.object({
 export type MonorepoConfig = z.infer<typeof configSchema>;
 export type TazeConfig = z.infer<typeof tazeConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
-export type QualityConfig = z.infer<typeof qualityConfigSchema>;
-export type WorkspaceConfig = z.infer<typeof workspaceConfigSchema>;
-export type CatalogConfig = z.infer<typeof catalogConfigSchema>;
-export type HealthConfig = z.infer<typeof healthConfigSchema>;
+export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
+export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;

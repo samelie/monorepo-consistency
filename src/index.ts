@@ -9,14 +9,11 @@
 // Export configuration
 export * from "./config/index.js";
 
-export { configHandler } from "./domains/config/index.js";
 // Export domain handlers for programmatic use
+export { configHandler } from "./domains/config/index.js";
 export { depsHandler } from "./domains/deps/index.js";
-export { healthHandler } from "./domains/health/index.js";
 export { packageJsonHandler } from "./domains/packagejson/index.js";
-export { qualityHandler } from "./domains/security/quality/index.js";
 export { tsconfigHandler } from "./domains/tsconfig/index.js";
-export { workspaceHandler } from "./domains/workspace/index.js";
 
 // Export types
 export * from "./types/index.js";

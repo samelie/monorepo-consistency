@@ -159,36 +159,6 @@ export function createConfigTemplate(): object {
                 removeInvalidFields: false,
             },
         },
-        quality: {
-            linting: {
-                enabled: true,
-                fix: false,
-            },
-            typeChecking: {
-                enabled: true,
-                strict: true,
-            },
-            testing: {
-                enabled: true,
-                coverage: false,
-                minCoverage: 80,
-            },
-        },
-        workspace: {
-            packageManager: "pnpm",
-            workspacePatterns: ["packages/*", "apps/*"],
-            ignoredWorkspaces: [],
-        },
-        catalog: {
-            enabled: false,
-            categories: [],
-            generateDocs: false,
-        },
-        health: {
-            checks: ["dependencies", "quality"],
-            failFast: false,
-            reportFormat: "markdown",
-        },
         ci: {
             enabled: false,
             failOnWarning: false,
