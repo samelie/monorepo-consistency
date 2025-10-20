@@ -43,7 +43,7 @@ const checkPackageJsonFiles = async (_workspacePath: string): Promise<Issue[]> =
     return [];
 };
 
-export const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
+const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
     const spinner = logger.spinner("Checking configurations...");
     spinner.start();
 
@@ -85,7 +85,7 @@ export const check = async (options: ConfigCheckOptions): Promise<CheckResult> =
     }
 };
 
-export const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
+const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
     const spinner = logger.spinner("Fixing configuration issues...");
     spinner.start();
 
@@ -139,7 +139,7 @@ const generate = async (_type: ConfigType | undefined, _options: CommandOptions 
 // Export handler object for consistency with command structure
 export const configHandler = {
     check,
-    fix,
     validate,
+    fix,
     generate,
 };

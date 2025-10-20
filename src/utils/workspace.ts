@@ -110,15 +110,3 @@ export async function loadPackageJson(packagePath: string): Promise<PackageInfo>
         scripts: pkg.scripts,
     };
 }
-
-/**
- * Execute a command in the workspace
- */
-export async function execInWorkspace(
-    command: string,
-    args: string[] = [],
-    options: { cwd?: string; parallel?: boolean } = {},
-): Promise<void> {
-    // TODO: Implement using child_process or execa
-    console.warn(`Would execute: ${command} ${args.join(" ")}`, options);
-}
