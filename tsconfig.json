@@ -39,13 +39,6 @@
                 "../../packages/publish/src/*",
                 "../../../packages/publish/src/*"
             ],
-            "@rad/config/*": [
-                "./packages/config/*",
-                "../config/*",
-                "../packages/config/*",
-                "../../packages/config/*",
-                "../../../packages/config/*"
-            ],
             "@adddog/eslint": [
                 "./packages/eslint",
                 "../eslint",
