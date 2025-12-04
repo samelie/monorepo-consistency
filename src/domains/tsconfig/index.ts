@@ -52,18 +52,6 @@ const generate = async (
 
         const result = await generateTsconfigs(generateOptions);
 
-        if (!options.verbose) {
-            if (result.success) {
-                logger.success(
-                    `Generated ${result.generated.length} TypeScript configuration${result.generated.length === 1 ? "" : "s"}`,
-                );
-            } else {
-                logger.error(
-                    `Generated ${result.generated.length} configs with ${result.errors.length} error${result.errors.length === 1 ? "" : "s"}`,
-                );
-            }
-        }
-
         return {
             success: result.success,
             generated: result.generated.length,

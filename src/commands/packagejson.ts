@@ -48,14 +48,17 @@ export function createPackageJsonCommand(): Command {
                         }
 
                         logger.info(`Summary: ${result.stats.total} issue(s) - Critical: ${result.stats.critical}, High: ${result.stats.high}, Medium: ${result.stats.medium}, Low: ${result.stats.low}\n`);
-                    }
 
-                    if (!result.success) {
-                        logger.error("Package.json hygiene checks failed");
-                        process.exit(1);
+                        // Exit with error if there are critical or high severity issues
+                        if (result.stats.critical > 0 || result.stats.high > 0) {
+                            logger.error("Package.json hygiene checks failed (critical or high severity issues found)");
+                            process.exit(1);
+                        } else {
+                            logger.warn("Package.json hygiene checks completed with warnings");
+                        }
+                    } else {
+                        logger.success("All package.json hygiene checks passed!");
                     }
-
-                    logger.success("All package.json hygiene checks passed!");
                 }
             } catch (error) {
                 logger.error(`Check failed: ${String(error)}`);

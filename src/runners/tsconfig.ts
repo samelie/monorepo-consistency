@@ -255,6 +255,9 @@ export async function generateTsconfigs(
         const localNodeTs = join(dir, "node.tsconfig.json");
         const localBuilderTs = join(dir, "builder.tsconfig.json");
 
+        // Track if we generated a config for this package
+        let generatedConfig = false;
+
         // Try to find nearest config template
         for (const relativeConfigPath of POSSIBLE_APP_CONFIG_LOCATIONS) {
             const nearestWebTs = join(dir, relativeConfigPath, "web.tsconfig.json");
@@ -291,6 +294,7 @@ export async function generateTsconfigs(
                         basePath: nearestNodeTs,
                     });
 
+                    generatedConfig = true;
                     break;
                 } catch (error) {
                     result.errors.push({
@@ -331,6 +335,7 @@ export async function generateTsconfigs(
                         basePath: nearestWebTs,
                     });
 
+                    generatedConfig = true;
                     break;
                 } catch (error) {
                     result.errors.push({
@@ -372,6 +377,7 @@ export async function generateTsconfigs(
                         basePath: nearestBuilderTs,
                     });
 
+                    generatedConfig = true;
                     break;
                 } catch (error) {
                     if (verbose) {
@@ -384,10 +390,12 @@ export async function generateTsconfigs(
                     result.success = false;
                 }
             }
+        }
 
-            // Typecheck config (always write)
+        // Write typecheck config once per package (only if we generated a main config)
+        if (generatedConfig) {
             if (verbose) {
-                process.stdout.write(`writing TypeCheck 🔍 ${targetTypecheck} 📝 \n`);
+                process.stdout.write(`writing TypeCheck 🔍 ${targetTypecheck} 📝\n`);
             }
 
             if (!dryRun) {
