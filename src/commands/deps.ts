@@ -108,6 +108,48 @@ export function createDepsCommand(): Command {
             }
         });
 
+    // deps upgrade - upgrade a single dependency across the monorepo
+    deps
+        .command("upgrade <dependency>")
+        .description("Upgrade a single dependency across all packages")
+        .option("--major", "allow major version upgrades (default)")
+        .option("--minor", "only minor version upgrades")
+        .option("--patch", "only patch version upgrades")
+        .option("-w, --write", "write changes to package.json files")
+        .option("--install", "run install after upgrading")
+        .option("--dry-run", "preview the command without executing")
+        .addHelpText(
+            "after",
+            `
+Examples:
+  $ mono deps upgrade typescript --major -w      # Upgrade typescript to latest major
+  $ mono deps upgrade react --minor -w --install # Upgrade react minor + install
+  $ mono deps upgrade lodash --patch -w          # Upgrade lodash patch only
+  $ mono deps upgrade zod --dry-run              # Preview upgrade command
+`,
+        )
+        .action(async (dependency, options) => {
+            try {
+                const result = await depsHandler.upgrade({
+                    dependency,
+                    ...options,
+                });
+
+                if (!result.dryRun && result.success) {
+                    if (options.write) {
+                        logger.success(`Successfully upgraded ${dependency} (${result.mode})`);
+                    } else {
+                        logger.info(`Found updates for ${dependency}. Use -w to write changes.`);
+                    }
+                }
+
+                process.exit(result.success ? 0 : 1);
+            } catch (error) {
+                logger.error(`Failed to upgrade ${dependency}: ${error}`);
+                process.exit(1);
+            }
+        });
+
     // deps preview
     deps
         .command("preview")

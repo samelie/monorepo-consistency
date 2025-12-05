@@ -31,6 +31,30 @@ interface DepsUpdateOptions extends CommandOptions {
     dryRun?: boolean;
 }
 
+interface DepsUpgradeOptions extends CommandOptions {
+    /** The dependency name to upgrade (e.g., "typescript", "react") */
+    dependency: string;
+    /** Allow major version upgrades */
+    major?: boolean;
+    /** Only minor version upgrades */
+    minor?: boolean;
+    /** Only patch version upgrades */
+    patch?: boolean;
+    /** Write changes to package.json */
+    write?: boolean;
+    /** Run install after upgrading */
+    install?: boolean;
+    /** Preview without applying */
+    dryRun?: boolean;
+}
+
+interface UpgradeResult {
+    success: boolean;
+    dependency: string;
+    mode: "major" | "minor" | "patch";
+    dryRun: boolean;
+}
+
 // Pure functions for dependency operations
 
 const checkUnusedDependencies = async (_workspacePath: string): Promise<Issue[]> => {
@@ -217,10 +241,72 @@ const report = async (options: ReportOptions): Promise<void> => {
     }
 };
 
+/**
+ * Upgrade a single dependency across the entire monorepo
+ *
+ * Maps to: taze [major|minor|patch] -r --include <dependency> [-w] [--install]
+ */
+const upgrade = async (options: DepsUpgradeOptions): Promise<UpgradeResult> => {
+    const { dependency, major, minor, patch, write, install, dryRun } = options;
+
+    // Determine upgrade mode (default to major)
+    const mode = patch ? "patch" : minor ? "minor" : "major";
+
+    const spinner = logger.spinner(`Upgrading ${dependency} (${mode})...`);
+    spinner.start();
+
+    try {
+        const workspace = await getWorkspaceInfo(options.cwd);
+
+        // Get taze config if available
+        let tazeConfig;
+        try {
+            const configManager = ConfigManager.getInstance();
+            const config = configManager.getConfig();
+            tazeConfig = config?.deps?.taze;
+        } catch {
+            tazeConfig = undefined;
+        }
+
+        // Build taze arguments: taze [mode] -r --include <dep> [-w] [--install]
+        const args: string[] = [mode, "--recursive", "--include", dependency];
+
+        if (write) {
+            args.push("--write");
+        }
+
+        if (install) {
+            args.push("--install");
+        }
+
+        const runner = tazeConfig?.runner || "npx";
+
+        if (dryRun) {
+            logger.info(`[DRY RUN] Would execute: ${runner} taze ${args.join(" ")}`);
+            spinner.succeed(`Upgrade preview complete for ${dependency}`);
+            return { success: true, dependency, mode, dryRun: true };
+        }
+
+        await runTaze({
+            ...(tazeConfig ? { config: tazeConfig } : {}),
+            args,
+            cwd: workspace.root,
+            silent: false,
+        });
+
+        spinner.succeed(`Upgraded ${dependency} (${mode})`);
+        return { success: true, dependency, mode, dryRun: false };
+    } catch (error) {
+        spinner.fail(`Failed to upgrade ${dependency}`);
+        throw error;
+    }
+};
+
 // Export handler object for consistency with command structure
 export const depsHandler = {
     check,
     fix,
     update,
+    upgrade,
     report,
 };
