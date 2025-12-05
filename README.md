@@ -808,6 +808,69 @@ When you create a new shared package like `@domain/new-package`:
 4. **Stale configuration**
    - Try: `mono tsconfig generate --force`
 
+## Dependency Management
+
+### Upgrade a Single Dependency
+
+Upgrade a specific dependency across all packages in the monorepo:
+
+```bash
+# Upgrade to latest major version (default)
+mono deps upgrade typescript --major -w
+
+# Upgrade to latest minor version
+mono deps upgrade react --minor -w
+
+# Upgrade to latest patch version
+mono deps upgrade lodash --patch -w
+
+# Preview without applying changes
+mono deps upgrade zod --dry-run
+
+# Upgrade and install
+mono deps upgrade vitest --minor -w --install
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--major` | Allow major version upgrades (default) |
+| `--minor` | Only minor version upgrades |
+| `--patch` | Only patch version upgrades |
+| `-w, --write` | Write changes to package.json files |
+| `--install` | Run install after upgrading |
+| `--dry-run` | Preview the command without executing |
+
+### Update All Dependencies
+
+```bash
+# Interactive update mode
+mono deps update -i
+
+# Update all with major versions
+mono deps update --major -w
+
+# Preview available updates
+mono deps preview
+
+# Update specific packages
+mono deps update --filter react vue
+```
+
+### Check Dependencies
+
+```bash
+# Check for dependency issues
+mono deps check --all
+
+# Check for unused dependencies
+mono deps check --unused
+
+# Check for version mismatches
+mono deps check --mismatches
+```
+
 ## Scripts
 
 | Script | Description |
