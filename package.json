@@ -41,24 +41,24 @@
     "lodash": "^4.17.21",
     "minimatch": "^10.1.1",
     "ora": "^9.0.0",
-    "yaml": "^2.8.1",
-    "zod": "^4.1.12",
+    "yaml": "^2.8.2",
+    "zod": "^4.1.13",
     "zx": "^8.8.5"
   },
   "devDependencies": {
     "@adddog/build-configs": "workspace:*",
     "@adddog/config-defaults": "workspace:*",
     "@adddog/eslint": "workspace:*",
-    "@types/lodash": "^4.17.20",
+    "@types/lodash": "^4.17.21",
     "@types/node": "^24.10.1",
-    "@vitest/coverage-v8": "^4.0.9",
-    "bumpp": "^10.3.1",
+    "@vitest/coverage-v8": "^4.0.15",
+    "bumpp": "^10.3.2",
     "eslint": "^9.39.1",
-    "knip": "^5.69.1",
-    "tsx": "^4.20.6",
+    "knip": "^5.71.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1",
-    "vitest": "^4.0.9"
+    "vitest": "^4.0.15"
   },
   "peerDependencies": {
     "@vue/compiler-sfc": "^3.5.22"
