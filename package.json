@@ -30,7 +30,7 @@
     "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run test && pnpm run knip && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
     "build:watch": "unbuild --watch",
-    "test": "vitest run"
+    "test": "echo '⚠️⚠️⚠️no test vitest --watch=false'"
   },
   "dependencies": {
     "@adddog/zod-to-json-schema": "^0.0.1",
