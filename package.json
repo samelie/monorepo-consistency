@@ -42,7 +42,7 @@
     "minimatch": "^10.1.1",
     "ora": "^9.0.0",
     "yaml": "^2.8.2",
-    "zod": "^4.1.13",
+    "zod": "^4.2.1",
     "zx": "^8.8.5"
   },
   "devDependencies": {
@@ -51,14 +51,14 @@
     "@adddog/eslint": "workspace:*",
     "@types/lodash": "^4.17.21",
     "@types/node": "^24.10.4",
-    "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/coverage-v8": "^4.0.16",
     "bumpp": "^10.3.2",
     "eslint": "^9.39.2",
-    "knip": "^5.72.0",
+    "knip": "^5.74.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.16"
   },
   "peerDependencies": {
     "@vue/compiler-sfc": "^3.5.22"
