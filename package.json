@@ -54,7 +54,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "bumpp": "^10.3.2",
     "eslint": "^9.39.2",
-    "knip": "^5.79.0",
+    "knip": "^5.80.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1",
