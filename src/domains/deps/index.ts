@@ -247,7 +247,7 @@ const report = async (options: ReportOptions): Promise<void> => {
  * Maps to: taze [major|minor|patch] -r --include <dependency> [-w] [--install]
  */
 const upgrade = async (options: DepsUpgradeOptions): Promise<UpgradeResult> => {
-    const { dependency, major, minor, patch, write, install, dryRun } = options;
+    const { dependency, major: _major, minor, patch, write, install, dryRun } = options;
 
     // Determine upgrade mode (default to major)
     const mode = patch ? "patch" : minor ? "minor" : "major";
