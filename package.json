@@ -50,15 +50,15 @@
     "@adddog/config-defaults": "workspace:*",
     "@adddog/eslint": "workspace:*",
     "@types/lodash": "^4.17.23",
-    "@types/node": "^25.0.6",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@types/node": "^25.0.7",
+    "@vitest/coverage-v8": "^4.0.17",
     "bumpp": "^10.3.2",
     "eslint": "^9.39.2",
     "knip": "^5.80.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.17"
   },
   "peerDependencies": {
     "@vue/compiler-sfc": "^3.5.22"
