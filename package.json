@@ -23,14 +23,14 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "types": "tsc -p tsconfig.typecheck.json",
-    "knip": "knip",
     "dev": "tsx src/cli.ts",
     "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
     "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run test && pnpm run knip && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
     "build:watch": "unbuild --watch",
-    "test": "echo '⚠️⚠️⚠️no test vitest --watch=false'"
+    "test": "echo '⚠️⚠️⚠️no test vitest --watch=false'",
+    "knip": "knip"
   },
   "dependencies": {
     "@adddog/zod-to-json-schema": "^0.0.1",
@@ -50,9 +50,9 @@
     "@adddog/config-defaults": "workspace:*",
     "@adddog/eslint": "workspace:*",
     "@types/lodash": "^4.17.23",
-    "@types/node": "^25.0.7",
+    "@types/node": "^25.0.8",
     "@vitest/coverage-v8": "^4.0.17",
-    "bumpp": "^10.3.2",
+    "bumpp": "^10.4.0",
     "eslint": "^9.39.2",
     "knip": "^5.80.2",
     "tsx": "^4.21.0",
