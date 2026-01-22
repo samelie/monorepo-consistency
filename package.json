@@ -38,27 +38,25 @@
     "commander": "^14.0.2",
     "fast-glob": "^3.3.3",
     "get-tsconfig": "^4.13.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "minimatch": "^10.1.1",
-    "ora": "^9.0.0",
+    "ora": "^9.1.0",
     "yaml": "^2.8.2",
-    "zod": "^4.3.5",
+    "zod": "^4.3.6",
     "zx": "^8.8.5"
   },
   "devDependencies": {
-    "@adddog/build-configs": "workspace:*",
-    "@adddog/config-defaults": "workspace:*",
-    "@adddog/eslint": "workspace:*",
+    "@adddog/build-configs": "^0.0.5",
     "@types/lodash": "^4.17.23",
-    "@types/node": "^25.0.9",
-    "@vitest/coverage-v8": "^4.0.17",
+    "@types/node": "^25.0.10",
+    "@vitest/coverage-v8": "^4.0.18",
     "bumpp": "^10.4.0",
     "eslint": "^9.39.2",
-    "knip": "^5.81.0",
+    "knip": "^5.82.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unbuild": "^3.6.1",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "peerDependencies": {
     "@vue/compiler-sfc": "^3.5.22"
