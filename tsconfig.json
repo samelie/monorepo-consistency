@@ -38,14 +38,6 @@
                 "../packages/publish/src/*",
                 "../../packages/publish/src/*",
                 "../../../packages/publish/src/*"
-            ],
-            "@adddog/eslint": [
-                "./packages/eslint",
-                "../eslint",
-                "../packages/eslint",
-                "../../packages/eslint",
-                "../../../packages/eslint",
-                "../../../../packages/eslint"
             ]
         },
         "types": [
