@@ -37,7 +37,7 @@
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
     "fast-glob": "^3.3.3",
-    "get-tsconfig": "^4.13.0",
+    "get-tsconfig": "^4.13.1",
     "lodash": "^4.17.23",
     "minimatch": "^10.1.1",
     "ora": "^9.1.0",
@@ -48,7 +48,7 @@
   "devDependencies": {
     "@adddog/build-configs": "^0.0.5",
     "@types/lodash": "^4.17.23",
-    "@types/node": "^25.0.10",
+    "@types/node": "^25.1.0",
     "@vitest/coverage-v8": "^4.0.18",
     "bumpp": "^10.4.0",
     "eslint": "^9.39.2",
