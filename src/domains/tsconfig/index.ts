@@ -1,7 +1,8 @@
 import type { TsconfigGenerateOptions, TsconfigType } from "../../runners/tsconfig.js";
 import type { CheckResult, CommandOptions, Issue } from "../../types/index.js";
 import { existsSync, readFileSync } from "node:fs";
-import { join, parse } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, parse, resolve } from "node:path";
 import glob from "fast-glob";
 import { ConfigManager } from "../../config/loader.js";
 import {
@@ -331,9 +332,99 @@ const check = async (options: TsconfigCheckOptions): Promise<CheckResult> => {
     }
 };
 
+interface PathCheckOptions extends CommandOptions {
+    namespaces?: Record<string, string>;
+    skipApps?: boolean;
+}
+
+/**
+ * Check that workspace packages are registered in their namespace's base tsconfig paths
+ */
+const checkPaths = async (options: PathCheckOptions): Promise<CheckResult> => {
+    const spinner = logger.spinner("Checking tsconfig paths...");
+    spinner.start();
+
+    const issues: Issue[] = [];
+
+    try {
+        const workspace = await getWorkspaceInfo(options.cwd);
+        const configManager = ConfigManager.getInstance();
+        const config = configManager.getConfig();
+        const pathEnforcement = config?.tsconfig?.pathEnforcement;
+        const namespaces = options.namespaces ?? pathEnforcement?.namespaces ?? {};
+        const skipApps = options.skipApps ?? pathEnforcement?.skipApps ?? true;
+
+        if (Object.keys(namespaces).length === 0) {
+            spinner.succeed("No namespaces configured for path enforcement");
+            return {
+                success: true,
+                issues: [],
+                stats: { total: 0, critical: 0, high: 0, medium: 0, low: 0 },
+            };
+        }
+
+        for (const [namespace, baseTsconfigRelPath] of Object.entries(namespaces)) {
+            const baseTsconfigPath = resolve(workspace.root, baseTsconfigRelPath);
+
+            let baseTsconfig: { compilerOptions?: { paths?: Record<string, string[]> } };
+            try {
+                const content = await readFile(baseTsconfigPath, "utf-8");
+                baseTsconfig = JSON.parse(content);
+            } catch {
+                issues.push({
+                    severity: "high",
+                    type: "missing-base-tsconfig",
+                    file: baseTsconfigRelPath,
+                    message: `Base tsconfig not found: ${baseTsconfigRelPath}`,
+                });
+                continue;
+            }
+
+            const existingPaths = Object.keys(baseTsconfig.compilerOptions?.paths ?? {});
+
+            const namespacePkgs = workspace.packages
+                .filter(p => p.name.startsWith(`${namespace}/`))
+                .filter(p => !skipApps || !p.path.includes("/apps/"));
+
+            for (const pkg of namespacePkgs) {
+                const found = existingPaths.some(
+                    k => k === pkg.name || k.startsWith(`${pkg.name}/`),
+                );
+                if (!found) {
+                    issues.push({
+                        severity: "high",
+                        type: "missing-tsconfig-path",
+                        package: pkg.name,
+                        file: baseTsconfigRelPath,
+                        message: `Missing from ${baseTsconfigRelPath} paths`,
+                    });
+                }
+            }
+        }
+
+        spinner.succeed(`Checked tsconfig paths for ${Object.keys(namespaces).length} namespace(s)`);
+
+        return {
+            success: issues.length === 0,
+            issues,
+            stats: {
+                total: issues.length,
+                critical: issues.filter(i => i.severity === "critical").length,
+                high: issues.filter(i => i.severity === "high").length,
+                medium: issues.filter(i => i.severity === "medium").length,
+                low: issues.filter(i => i.severity === "low").length,
+            },
+        };
+    } catch (error) {
+        spinner.fail("Tsconfig path check failed");
+        throw error;
+    }
+};
+
 // Export handler object for consistency with other domains
 export const tsconfigHandler = {
     generate,
     validate,
     check,
+    checkPaths,
 };

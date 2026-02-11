@@ -87,6 +87,11 @@ const tsconfigConfigSchema = z.object({
         checkConsistency: z.boolean().default(true).describe("Check compiler options consistency"),
         strictMode: z.boolean().default(false).describe("Enforce strict validation rules"),
     }).optional().describe("Validation options"),
+    pathEnforcement: z.object({
+        enabled: z.boolean().default(false).describe("Enable tsconfig path enforcement"),
+        namespaces: z.record(z.string(), z.string()).default({}).describe("Namespace to base tsconfig path map"),
+        skipApps: z.boolean().default(true).describe("Skip apps/ packages"),
+    }).optional().describe("Tsconfig path enforcement configuration"),
 });
 
 /**
@@ -150,6 +155,30 @@ const packageJsonConfigSchema = z.object({
 });
 
 /**
+ * Knip configuration
+ */
+const knipConfigSchema = z.object({
+    enabled: z.boolean().default(true).describe("Enable knip config generation"),
+    frameworkDetection: z.boolean().default(true).describe("Auto-detect framework for knip config"),
+    addScriptToPackageJson: z.boolean().default(true).describe("Add knip script to package.json"),
+});
+
+/**
+ * Build configuration
+ */
+const buildConfigSchema = z.object({
+    orderedPackages: z.array(z.string()).default([]).describe("Packages to build in order"),
+});
+
+/**
+ * Publish configuration
+ */
+const publishConfigSchema = z.object({
+    githubUsername: z.string().optional().describe("GitHub username for public repos"),
+    syncConfigPath: z.string().default(".github/sync-config.yaml").describe("Path to sync config"),
+});
+
+/**
  * Main configuration schema
  */
 export const configSchema = z.object({
@@ -157,9 +186,12 @@ export const configSchema = z.object({
     version: z.literal("1.0.0").default("1.0.0").describe("Config schema version"),
 
     // Domain configurations
+    build: buildConfigSchema.optional().describe("Build configuration"),
     deps: depsConfigSchema.optional().describe("Dependency management configuration"),
-    tsconfig: tsconfigConfigSchema.optional().describe("TypeScript configuration management"),
+    knip: knipConfigSchema.optional().describe("Knip dead-code analysis configuration"),
     packageJson: packageJsonConfigSchema.optional().describe("Package.json hygiene configuration"),
+    publish: publishConfigSchema.optional().describe("Publish configuration"),
+    tsconfig: tsconfigConfigSchema.optional().describe("TypeScript configuration management"),
 
     // Global settings
     ci: z.object({
@@ -186,9 +218,12 @@ export const configSchema = z.object({
         .describe("Config files to extend from"),
 });
 
-// Export inferred types
+// Inferred types
 export type MonorepoConfig = z.infer<typeof configSchema>;
 export type TazeConfig = z.infer<typeof tazeConfigSchema>;
+type BuildConfig = z.infer<typeof buildConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
+type KnipConfig = z.infer<typeof knipConfigSchema>;
 export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
+type PublishConfig = z.infer<typeof publishConfigSchema>;
 export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;

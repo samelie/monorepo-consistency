@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import type { Ora } from "ora";
 import chalk from "chalk";
 import ora from "ora";

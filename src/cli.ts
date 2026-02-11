@@ -2,10 +2,15 @@
 
 import process from "node:process";
 import { Command } from "commander";
+import { createBuildCommand } from "./commands/build.js";
+import { createCiCommand } from "./commands/ci.js";
 import { createConfigCommand } from "./commands/config.js";
 import { createDepsCommand } from "./commands/deps.js";
+import { createEnvCommand } from "./commands/env.js";
 import { createInitCommand } from "./commands/init.js";
+import { createKnipCommand } from "./commands/knip.js";
 import { createPackageJsonCommand } from "./commands/packagejson.js";
+import { createPublishCommand } from "./commands/publish.js";
 import { createSchemaCommand } from "./commands/schema.js";
 import { createTsconfigCommand } from "./commands/tsconfig.js";
 import { ConfigManager } from "./config/loader.js";
@@ -32,12 +37,17 @@ program
     .option("--no-color", "disable colors");
 
 // Register commands
-program.addCommand(createInitCommand());
-program.addCommand(createDepsCommand());
+program.addCommand(createBuildCommand());
+program.addCommand(createCiCommand());
 program.addCommand(createConfigCommand());
+program.addCommand(createDepsCommand());
+program.addCommand(createEnvCommand());
+program.addCommand(createInitCommand());
+program.addCommand(createKnipCommand());
+program.addCommand(createPackageJsonCommand());
+program.addCommand(createPublishCommand());
 program.addCommand(createSchemaCommand());
 program.addCommand(createTsconfigCommand());
-program.addCommand(createPackageJsonCommand());
 
 // Custom help text
 program.addHelpText(
@@ -51,6 +61,11 @@ Examples:
   $ mono tsconfig generate              # Generate TypeScript configs
   $ mono tsconfig generate --type=node  # Generate only node configs
   $ mono packagejson check              # Check package.json hygiene
+  $ mono knip generate                  # Generate knip configs for all packages
+  $ mono env encode .env --copy         # Base64 encode .env, copy to clipboard
+  $ mono build --dry-run                # Preview build order
+  $ mono ci mirror                      # Run typecheck + lint locally
+  $ mono publish init my-pkg packages/my-pkg  # Init public repo
 
 Documentation:
   Visit https://github.com/rad/mono for full documentation

@@ -10,9 +10,14 @@
 export * from "./config/index.js";
 
 // Export domain handlers for programmatic use
+export { buildHandler } from "./domains/build/index.js";
 export { configHandler } from "./domains/config/index.js";
 export { depsHandler } from "./domains/deps/index.js";
+export { envHandler } from "./domains/env/index.js";
+export { defaultKnipConfig, defineKnipConfig } from "./domains/knip/defaults.js";
+export { knipHandler } from "./domains/knip/index.js";
 export { packageJsonHandler } from "./domains/packagejson/index.js";
+export { publishHandler } from "./domains/publish/index.js";
 export { tsconfigHandler } from "./domains/tsconfig/index.js";
 
 // Export types
