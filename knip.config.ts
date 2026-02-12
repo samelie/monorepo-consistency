@@ -6,7 +6,7 @@ export default defineKnipConfig({
     entry: ["src/index.ts", "src/cli.ts", "bin/*.{ts,js}"],
     project: ["src/**/*.ts", "bin/**/*.{ts,js}"],
     ignore: [
-        // Test fixtures and helpers - used by vitest
+        // WHY: test fixtures/helpers referenced by vitest, not by src
         "tests/**",
     ],
 });

@@ -221,9 +221,9 @@ export const configSchema = z.object({
 // Inferred types
 export type MonorepoConfig = z.infer<typeof configSchema>;
 export type TazeConfig = z.infer<typeof tazeConfigSchema>;
-type BuildConfig = z.infer<typeof buildConfigSchema>;
+type _BuildConfig = z.infer<typeof buildConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
-type KnipConfig = z.infer<typeof knipConfigSchema>;
+type _KnipConfig = z.infer<typeof knipConfigSchema>;
 export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
-type PublishConfig = z.infer<typeof publishConfigSchema>;
+type _PublishConfig = z.infer<typeof publishConfigSchema>;
 export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;
