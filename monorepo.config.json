@@ -6,7 +6,8 @@
       "@adddog/eslint",
       "@adddog/config-defaults",
       "@adddog/trivial-user-agent-detector",
-      "@rad/vite"
+      "@rad/vite",
+      "@k8s/lib-sdk"
     ]
   },
   "deps": {
