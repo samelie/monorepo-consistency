@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "build": {
     "orderedPackages": [
+      "@adddog/build-configs",
       "@adddog/eslint",
       "@adddog/config-defaults",
       "@adddog/trivial-user-agent-detector",
