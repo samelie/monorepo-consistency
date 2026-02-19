@@ -9,8 +9,14 @@
       "@adddog/config-defaults",
       "@adddog/trivial-user-agent-detector",
       "@rad/env",
+      "@rad/logging",
+      "@adddog/k8s",
+      "@adddog/design-tokens",
       "@adddog/zod-to-json-schema",
       "@finance-vie/schema",
+      "@dnd-3.5/env",
+      "@park-app/env",
+      "@pessl/env",
       "@rad/vite",
       "@k8s/lib-sdk"
     ]
