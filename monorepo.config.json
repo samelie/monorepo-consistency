@@ -1,6 +1,12 @@
 {
   "$schema": "./monorepo.schema.json",
   "version": "1.0.0",
+  "build": {
+    "orderedPackages": [
+      "@adddog/config-defaults",
+      "@rad/vite"
+    ]
+  },
   "deps": {
     "taze": {
       "runner": "pnpx"
