@@ -4,6 +4,7 @@
   "build": {
     "orderedPackages": [
       "@adddog/config-defaults",
+      "@adddog/trivial-user-agent-detector",
       "@rad/vite"
     ]
   },
