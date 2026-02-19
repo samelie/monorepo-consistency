@@ -8,6 +8,8 @@
       "@adddog/eslint",
       "@adddog/config-defaults",
       "@adddog/trivial-user-agent-detector",
+      "@rad/env",
+      "@adddog/zod-to-json-schema",
       "@rad/vite",
       "@k8s/lib-sdk"
     ]
