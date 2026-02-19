@@ -10,6 +10,7 @@
       "@adddog/trivial-user-agent-detector",
       "@rad/env",
       "@adddog/zod-to-json-schema",
+      "@finance-vie/schema",
       "@rad/vite",
       "@k8s/lib-sdk"
     ]
