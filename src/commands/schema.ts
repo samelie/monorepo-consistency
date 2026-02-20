@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { Command } from "commander";
@@ -16,6 +16,7 @@ export function createSchemaCommand(): Command {
         .description("Generate configuration schemas and templates")
         .option("-o, --output <path>", "output file path")
         .option("--format <type>", "output format (json|typescript|template)", "json")
+        .option("--force", "overwrite existing files")
         .action(async options => {
             try {
                 const cwd = command.optsWithGlobals().cwd || process.cwd();
@@ -40,8 +41,13 @@ export function createSchemaCommand(): Command {
 
                     case "template": {
                         const template = createConfigTemplate();
-                        const filePath = outputPath || resolve(cwd, "monorepo.config.json");
-                        writeFileSync(filePath, JSON.stringify(template, null, 2), "utf-8");
+                        const filePath = outputPath || resolve(cwd, "monorepo.config.template.json");
+                        if (existsSync(filePath) && !options.force) {
+                            logger.error(`File already exists: ${filePath}`);
+                            logger.info("Use --force to overwrite or --output to specify a different path");
+                            process.exit(1);
+                        }
+                        writeFileSync(filePath, `${JSON.stringify(template, null, 2)}\n`, "utf-8");
                         logger.success(`Configuration template generated: ${filePath}`);
                         break;
                     }

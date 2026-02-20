@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { createBuildCommand } from "./commands/build.js";
 import { createCiCommand } from "./commands/ci.js";
@@ -16,13 +19,16 @@ import { createTsconfigCommand } from "./commands/tsconfig.js";
 import { ConfigManager } from "./config/loader.js";
 import { logger } from "./utils/logger.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, "../package.json"), "utf-8")) as { version: string };
+
 const program = new Command();
 
 // Main program configuration
 program
     .name("mono")
     .description("Monorepo consistency and maintenance toolkit")
-    .version("1.0.0")
+    .version(pkg.version)
     .configureHelp({
         sortSubcommands: true,
         subcommandTerm: cmd => cmd.name(),

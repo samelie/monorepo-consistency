@@ -74,7 +74,7 @@ export function createPackageJsonCommand(): Command {
         .option("--remove-scripts", "remove forbidden scripts")
         .option("--add-fields", "add missing required fields with defaults")
         .option("--remove-fields", "remove forbidden fields")
-        .option("--all", "apply all available fixes")
+        .option("--all", "apply all available fixes", true)
         .option("--dry-run", "preview changes without writing")
         .action(async options => {
             try {
