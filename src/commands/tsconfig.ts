@@ -201,42 +201,5 @@ About:
             }
         });
 
-    // tsconfig paths
-    tsconfig
-        .command("paths")
-        .description("Check that workspace packages are registered in base tsconfig paths")
-        .option("--skip-apps", "Skip packages in apps/ directories", true)
-        .action(async options => {
-            try {
-                const globalOpts = tsconfig.optsWithGlobals();
-                const result = await tsconfigHandler.checkPaths({
-                    ...options,
-                    skipApps: options.skipApps,
-                    cwd: globalOpts.cwd,
-                    verbose: globalOpts.verbose,
-                    silent: globalOpts.silent,
-                });
-
-                if (globalOpts.json) {
-                    logger.json(result);
-                } else {
-                    if (result.success) {
-                        logger.success("All packages are properly registered in tsconfig paths");
-                    } else {
-                        logger.warn(`Found ${result.stats.total} missing path(s)`);
-                        formatIssues(result);
-                    }
-                }
-
-                process.exit(result.success ? 0 : 1);
-            } catch (error) {
-                logger.error(`Tsconfig path check failed: ${String(error)}`);
-                if (tsconfig.optsWithGlobals().verbose) {
-                    logger.error(error instanceof Error ? error.stack || "" : "");
-                }
-                process.exit(1);
-            }
-        });
-
     return tsconfig;
 }

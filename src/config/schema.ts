@@ -87,11 +87,6 @@ const tsconfigConfigSchema = z.object({
         checkConsistency: z.boolean().default(true).describe("Check compiler options consistency"),
         strictMode: z.boolean().default(false).describe("Enforce strict validation rules"),
     }).optional().describe("Validation options"),
-    pathEnforcement: z.object({
-        enabled: z.boolean().default(false).describe("Enable tsconfig path enforcement"),
-        namespaces: z.record(z.string(), z.string()).default({}).describe("Namespace to base tsconfig path map"),
-        skipApps: z.boolean().default(true).describe("Skip apps/ packages"),
-    }).optional().describe("Tsconfig path enforcement configuration"),
 });
 
 /**
