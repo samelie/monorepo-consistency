@@ -29,7 +29,7 @@
     "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run test && pnpm run knip && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
     "build:watch": "unbuild --watch",
-    "test": "echo '⚠️⚠️⚠️no test vitest --watch=false'",
+    "test": "vitest --watch=false",
     "knip": "knip"
   },
   "dependencies": {
