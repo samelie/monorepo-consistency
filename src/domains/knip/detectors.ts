@@ -6,6 +6,7 @@ interface WorkspaceConfig {
     entry?: string[];
     project?: string[];
     ignore?: string[];
+    ignoreBinaries?: string[];
 }
 
 interface FrameworkDetector {
@@ -65,6 +66,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
         config: {
             entry: ["src/index.ts", "index.ts"],
             project: ["**/*.ts"],
+            ignoreBinaries: ["pulumi"],
         },
     },
     {

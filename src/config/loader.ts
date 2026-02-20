@@ -10,13 +10,18 @@ import { configSchema } from "./schema.js";
  * Configuration loader error
  */
 export class ConfigLoaderError extends Error {
+    readonly path?: string;
+    override readonly cause?: unknown;
+
     constructor(
         message: string,
-        public readonly path?: string,
-        public readonly cause?: unknown,
+        path?: string,
+        cause?: unknown,
     ) {
         super(message);
         this.name = "ConfigLoaderError";
+        this.path = path;
+        this.cause = cause;
     }
 }
 
@@ -24,8 +29,10 @@ export class ConfigLoaderError extends Error {
  * Configuration validation error with detailed issues
  */
 export class ConfigValidationError extends ConfigLoaderError {
+    readonly issues: z.ZodIssue[];
+
     constructor(
-        public readonly issues: z.ZodIssue[],
+        issues: z.ZodIssue[],
         path?: string,
     ) {
         const message = `Configuration validation failed:\n${issues
@@ -33,6 +40,7 @@ export class ConfigValidationError extends ConfigLoaderError {
             .join("\n")}`;
         super(message, path);
         this.name = "ConfigValidationError";
+        this.issues = issues;
     }
 }
 

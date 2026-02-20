@@ -72,9 +72,6 @@ const tsconfigConfigSchema = z.object({
         ])
         .describe("Possible locations for app-specific configs relative to a package"),
     generateTypecheck: z.boolean().default(true).describe("Generate tsconfig.typecheck.json files"),
-    filterPathsByDependencies: z.boolean()
-        .default(true)
-        .describe("Filter compilerOptions.paths to only include actual dependencies"),
     excludePatterns: z.array(z.string())
         .default(["**/node_modules/**", "**/dist/**", "**/build/**"])
         .describe("Patterns to exclude when scanning for packages"),
@@ -216,9 +213,6 @@ export const configSchema = z.object({
 // Inferred types
 export type MonorepoConfig = z.infer<typeof configSchema>;
 export type TazeConfig = z.infer<typeof tazeConfigSchema>;
-export type _BuildConfig = z.infer<typeof buildConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
-export type _KnipConfig = z.infer<typeof knipConfigSchema>;
 export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
-export type _PublishConfig = z.infer<typeof publishConfigSchema>;
 export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;

@@ -490,7 +490,6 @@ You can configure the tool's behavior via a `monorepo.config.json` file:
       "../../packages/config"
     ],
     "generateTypecheck": true,
-    "filterPathsByDependencies": true,
     "excludePatterns": [
       "**/node_modules/**",
       "**/dist/**",
@@ -534,7 +533,6 @@ You can configure the tool's behavior via a `monorepo.config.json` file:
 | `types` | array | `['web', 'node', 'builder']` | Config types to generate |
 | `configLocations` | array | See config | Possible locations for app-specific configs |
 | `generateTypecheck` | boolean | `true` | Generate tsconfig.typecheck.json files |
-| `filterPathsByDependencies` | boolean | `true` | Filter paths by actual dependencies |
 | `excludePatterns` | array | node_modules, dist, build | Patterns to exclude when scanning |
 | `rootConfigDir` | string | `'packages/config'` | Root config directory to skip |
 | `validation.checkMissing` | boolean | `true` | Check for missing tsconfig.json files |

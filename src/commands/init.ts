@@ -68,7 +68,6 @@ async function promptForConfig() {
                 "../../../../packages/config",
             ],
             generateTypecheck: true,
-            filterPathsByDependencies: true,
             excludePatterns: ["**/node_modules/**", "**/dist/**", "**/build/**"],
             rootConfigDir: "packages/config",
             validation: {

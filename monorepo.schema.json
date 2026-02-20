@@ -156,11 +156,6 @@
           "default": true,
           "type": "boolean"
         },
-        "filterPathsByDependencies": {
-          "description": "Filter compilerOptions.paths to only include actual dependencies",
-          "default": true,
-          "type": "boolean"
-        },
         "excludePatterns": {
           "description": "Patterns to exclude when scanning for packages",
           "default": [
@@ -217,7 +212,6 @@
         "types",
         "configLocations",
         "generateTypecheck",
-        "filterPathsByDependencies",
         "excludePatterns",
         "rootConfigDir"
       ],

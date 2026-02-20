@@ -102,7 +102,6 @@ export function createConfigTemplate(): object {
                 "../../../../packages/config",
             ],
             generateTypecheck: true,
-            filterPathsByDependencies: true,
             excludePatterns: [
                 "**/node_modules/**",
                 "**/dist/**",

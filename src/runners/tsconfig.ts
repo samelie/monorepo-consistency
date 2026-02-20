@@ -6,75 +6,6 @@ import { getTsconfig } from "get-tsconfig";
 import merge from "lodash/merge.js";
 
 /**
- * Extract all dependency package names from package.json
- */
-function extractDependencies(packageJsonPath: string): Set<string> {
-    const dependencies = new Set<string>();
-
-    try {
-        const pkgJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
-            dependencies?: Record<string, string>;
-            devDependencies?: Record<string, string>;
-        };
-
-        if (pkgJson.dependencies) {
-            for (const dep of Object.keys(pkgJson.dependencies)) {
-                dependencies.add(dep);
-            }
-        }
-
-        if (pkgJson.devDependencies) {
-            for (const dep of Object.keys(pkgJson.devDependencies)) {
-                dependencies.add(dep);
-            }
-        }
-    } catch {
-    // If we can't read package.json, return empty set
-    // This will result in no filtering
-    }
-
-    return dependencies;
-}
-
-/**
- * Filter compilerOptions.paths to only include paths for packages
- * that are actually dependencies in package.json
- */
-function filterPathsByDependencies(
-    tsConfig: Record<string, unknown>,
-    dependencies: Set<string>,
-): Record<string, unknown> {
-    const compilerOptions = tsConfig.compilerOptions as Record<string, unknown> | undefined;
-
-    if (!compilerOptions?.paths) {
-        return tsConfig;
-    }
-
-    const paths = compilerOptions.paths as Record<string, unknown>;
-    const filteredPaths: Record<string, unknown> = {};
-
-    for (const [pathKey, pathValue] of Object.entries(paths)) {
-    // Extract package name from path key (e.g., "@rad/env" from "@rad/env" or "@adddog/build-configs/*")
-        const packageName = pathKey.replace(/\/\*$/, "");
-
-        // Keep the path if:
-        // 1. It's in dependencies/devDependencies, OR
-        // 2. It's not a scoped package (e.g., "src*", not starting with "@")
-        if (dependencies.has(packageName) || !packageName.startsWith("@")) {
-            filteredPaths[pathKey] = pathValue;
-        }
-    }
-
-    return {
-        ...tsConfig,
-        compilerOptions: {
-            ...compilerOptions,
-            paths: filteredPaths,
-        },
-    };
-}
-
-/**
  * TypeScript config generation options
  */
 export interface TsconfigGenerateOptions {
@@ -240,15 +171,11 @@ export async function generateTsconfigs(
         const dir = join(rootDir, parse(pjsonPath).dir);
         const targetTs = join(dir, "tsconfig.json");
         const targetTypecheck = join(dir, "tsconfig.typecheck.json");
-        const packageJsonFullPath = join(rootDir, pjsonPath);
 
         // Skip the root config directory itself
         if (dir === join(rootDir, "packages/config")) {
             continue;
         }
-
-        // Extract dependencies from package.json for path filtering
-        const dependencies = extractDependencies(packageJsonFullPath);
 
         // Check for local config overrides
         const localWebTs = join(dir, "web.tsconfig.json");
@@ -273,12 +200,9 @@ export async function generateTsconfigs(
                 try {
                     const extractedConfig = extractConfigFromExtends(nearestNodeTs);
                     const localConfig = JSON.parse(readFileSync(localNodeTs, "utf-8"));
-                    let ts = merge({}, extractedConfig, localConfig);
+                    const ts = merge({}, extractedConfig, localConfig);
 
                     delete ts.extends;
-
-                    // Filter paths based on package.json dependencies
-                    ts = filterPathsByDependencies(ts, dependencies);
 
                     if (verbose) {
                         process.stdout.write(`writing Node 🧪 ${targetTs} 📝 (base: ${nearestNodeTs})\n`);
@@ -314,12 +238,9 @@ export async function generateTsconfigs(
                 try {
                     const extractedConfig = extractConfigFromExtends(nearestWebTs);
                     const localConfig = JSON.parse(readFileSync(localWebTs, "utf-8"));
-                    let ts = merge({}, extractedConfig, localConfig);
+                    const ts = merge({}, extractedConfig, localConfig);
 
                     delete ts.extends;
-
-                    // Filter paths based on package.json dependencies
-                    ts = filterPathsByDependencies(ts, dependencies);
 
                     if (verbose) {
                         process.stdout.write(`writing Web 🕸️ ${targetTs} 📝 (base: ${nearestWebTs})\n`);

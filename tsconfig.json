@@ -31,15 +31,7 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
         "noUncheckedSideEffectImports": true,
-        "paths": {
-            "@adddog/build-configs/*": [
-                "./packages/publish/src/*",
-                "../publish/src/*",
-                "../packages/publish/src/*",
-                "../../packages/publish/src/*",
-                "../../../packages/publish/src/*"
-            ]
-        },
+        "erasableSyntaxOnly": true,
         "types": [
             "node"
         ]
