@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "build": {
     "orderedPackages": [
+      "@adddog/monorepo-consistency",
       "@adddog/build-configs",
       "@adddog/eslint-plugin-rules",
       "@adddog/eslint",
