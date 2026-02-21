@@ -1,10 +1,10 @@
-import type { Change, CheckResult, CommandOptions, FixResult, Issue } from "../../types/index.js";
+import type { Change, CheckResult, CommandOptions, FixResult, Issue } from "../../types/index";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { minimatch } from "minimatch";
-import { ConfigManager } from "../../config/loader.js";
-import { logger } from "../../utils/logger.js";
-import { getWorkspaceInfo } from "../../utils/workspace.js";
+import { ConfigManager } from "../../config/loader";
+import { logger } from "../../utils/logger";
+import { getWorkspaceInfo } from "../../utils/workspace";
 
 interface PackageJsonCheckOptions extends CommandOptions {
     scripts?: boolean;

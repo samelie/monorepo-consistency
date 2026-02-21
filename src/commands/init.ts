@@ -3,8 +3,8 @@ import { resolve } from "node:path";
 import process from "node:process";
 import { Command } from "commander";
 import { question } from "zx";
-import { createConfigTemplate } from "../config/json-schema.js";
-import { logger } from "../utils/logger.js";
+import { createConfigTemplate } from "../config/json-schema";
+import { logger } from "../utils/logger";
 
 interface InitOptions {
     defaults?: boolean;

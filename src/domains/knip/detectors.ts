@@ -2,11 +2,18 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import fg from "fast-glob";
 
-interface WorkspaceConfig {
+export interface WorkspaceConfig {
     entry?: string[];
     project?: string[];
     ignore?: string[];
     ignoreBinaries?: string[];
+    ignoreDependencies?: string[];
+    // Plugin configs
+    vite?: boolean | { config?: string[]; entry?: string[] };
+    tailwind?: boolean | { config?: string[]; entry?: string[] };
+    postcss?: boolean | { config?: string[]; entry?: string[] };
+    // Vue SFC compiler flag (template uses this to generate compiler code)
+    useVueCompiler?: boolean;
 }
 
 interface FrameworkDetector {
@@ -82,6 +89,62 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
 ];
 
 /**
+ * Augment a workspace config with knip plugin configs and ignoreDependencies
+ * based on detected files and dependencies.
+ */
+export function augmentWithPlugins(
+    files: string[],
+    deps: Record<string, string>,
+    frameworkName: string,
+    config: WorkspaceConfig,
+): WorkspaceConfig {
+    const result = { ...config };
+    const ignoreDeps: string[] = [];
+
+    // Vite config detection
+    const viteConfig = files.find(f => /^vite\.config\.(?:js|ts|mjs|mts)$/.test(f));
+    if (viteConfig) {
+        result.vite = { config: [viteConfig] };
+    }
+
+    // Tailwind v3: config file exists → let knip's tailwind plugin handle it
+    const tailwindConfig = files.find(f => /^tailwind\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+    if (tailwindConfig) {
+        result.tailwind = { entry: [tailwindConfig] };
+    }
+
+    // Tailwind v4: @tailwindcss/vite in deps but no tailwind config file
+    const hasTailwindVite = "@tailwindcss/vite" in deps;
+    if (hasTailwindVite && !tailwindConfig) {
+        if ("tailwindcss" in deps) ignoreDeps.push("tailwindcss");
+        if ("@tailwindcss/postcss" in deps) ignoreDeps.push("@tailwindcss/postcss");
+        // postcss without its own config → undiscoverable
+        const postcssConfig = files.find(f => /^postcss\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+        if ("postcss" in deps && !postcssConfig) ignoreDeps.push("postcss");
+    }
+
+    // PostCSS config detection
+    const postcssConfig = files.find(f => /^postcss\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+    if (postcssConfig) {
+        result.postcss = { config: [postcssConfig] };
+    } else if ("postcss" in deps && !hasTailwindVite) {
+        // postcss in deps, no config file, not handled by tailwind v4 path
+        ignoreDeps.push("postcss");
+    }
+
+    // Vue compiler
+    if (frameworkName === "vue-vite") {
+        result.useVueCompiler = true;
+    }
+
+    if (ignoreDeps.length > 0) {
+        result.ignoreDependencies = [...(result.ignoreDependencies ?? []), ...ignoreDeps];
+    }
+
+    return result;
+}
+
+/**
  * Detect framework used in a package directory and return knip config overrides
  */
 export async function detectFramework(
@@ -105,9 +168,11 @@ export async function detectFramework(
 
     for (const detector of FRAMEWORK_DETECTORS) {
         if (detector.detect(files, deps)) {
-            return { name: detector.name, config: detector.config };
+            const augmented = augmentWithPlugins(files, deps, detector.name, detector.config);
+            return { name: detector.name, config: augmented };
         }
     }
 
-    return { name: "default", config: DEFAULT_CONFIG };
+    const augmented = augmentWithPlugins(files, deps, "default", DEFAULT_CONFIG);
+    return { name: "default", config: augmented };
 }

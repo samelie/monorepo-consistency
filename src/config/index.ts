@@ -10,7 +10,7 @@ export {
     generateTypeScriptDefinitions,
     validateConfig,
     writeJsonSchemaToFile,
-} from "./json-schema.js";
+} from "./json-schema";
 
 export {
     ConfigLoaderError,
@@ -19,13 +19,15 @@ export {
     loadConfig,
     type LoadConfigOptions,
     loadConfigSync,
-} from "./loader.js";
+} from "./loader";
 
 export {
     configSchema,
     type DepsConfig,
+    type KnipSchemaConfig,
     type MonorepoConfig,
     type PackageJsonConfig,
     type TazeConfig,
     type TsconfigConfig,
-} from "./schema.js";
+    type TsconfigContentConfig,
+} from "./schema";

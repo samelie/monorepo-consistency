@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command } from "commander";
-import { packageJsonHandler } from "../domains/packagejson/index.js";
-import { logger } from "../utils/logger.js";
+import { packageJsonHandler } from "../domains/packagejson/index";
+import { logger } from "../utils/logger";
 
 export function createPackageJsonCommand(): Command {
     const cmd = new Command("package-json")

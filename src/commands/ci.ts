@@ -1,8 +1,8 @@
 import process from "node:process";
 import { Command } from "commander";
 import { $ } from "zx";
-import { logger } from "../utils/logger.js";
-import { findWorkspaceRoot } from "../utils/workspace.js";
+import { logger } from "../utils/logger";
+import { findWorkspaceRoot } from "../utils/workspace";
 
 export function createCiCommand(): Command {
     const ci = new Command("ci")

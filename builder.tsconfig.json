@@ -1,16 +1,19 @@
 {
     "compilerOptions": {
+        "composite": true,
+        "noEmit": false,
+        "skipLibCheck": true,
         "target": "ES2020",
         "module": "ESNext",
+        "moduleResolution": "bundler",
+        "allowSyntheticDefaultImports": true,
         "lib": [
             "ES2020",
             "DOM"
         ],
-        "moduleResolution": "bundler",
         "outDir": "./dist",
         "esModuleInterop": true,
         "strict": true,
-        "skipLibCheck": true,
         "jsx": "preserve",
         "declaration": true,
         "declarationDir": "./dist/types",
@@ -32,11 +35,8 @@
         "useUnknownInCatchVariables": true,
         "resolvePackageJsonExports": true,
         "resolvePackageJsonImports": true,
-        "allowSyntheticDefaultImports": true,
         "isolatedModules": true,
-        "preserveConstEnums": true,
-        "composite": true,
-        "noEmit": false
+        "preserveConstEnums": true
     },
     "paths": {
         "@adddog/eslint-plugin-rules": [

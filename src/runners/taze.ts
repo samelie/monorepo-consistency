@@ -1,8 +1,8 @@
-import type { TazeConfig } from "../config/schema.js";
+import type { TazeConfig } from "../config/schema";
 import { existsSync } from "node:fs";
 import process from "node:process";
 import { $ } from "zx";
-import { logger } from "../utils/logger.js";
+import { logger } from "../utils/logger";
 
 /**
  * Run taze command with optional config file

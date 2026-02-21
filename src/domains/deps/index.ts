@@ -1,8 +1,8 @@
-import type { Change, CheckResult, CommandOptions, FixResult, Issue, ReportOptions } from "../../types/index.js";
-import { ConfigManager } from "../../config/loader.js";
-import { runTaze } from "../../runners/taze.js";
-import * as logger from "../../utils/logger.js";
-import { getWorkspaceInfo } from "../../utils/workspace.js";
+import type { Change, CheckResult, CommandOptions, FixResult, Issue, ReportOptions } from "../../types/index";
+import { ConfigManager } from "../../config/loader";
+import { runTaze } from "../../runners/taze";
+import * as logger from "../../utils/logger";
+import { getWorkspaceInfo } from "../../utils/workspace";
 
 interface DepsCheckOptions extends CommandOptions {
     unused?: boolean;

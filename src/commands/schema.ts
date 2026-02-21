@@ -6,8 +6,8 @@ import {
     createConfigTemplate,
     generateTypeScriptDefinitions,
     writeJsonSchemaToFile,
-} from "../config/json-schema.js";
-import { logger } from "../utils/logger.js";
+} from "../config/json-schema";
+import { logger } from "../utils/logger";
 
 export function createSchemaCommand(): Command {
     const command = new Command("schema");
@@ -69,7 +69,7 @@ export function createSchemaCommand(): Command {
         .argument("<file>", "configuration file to validate")
         .action(async file => {
             try {
-                const { loadConfig } = await import("../config/loader.js");
+                const { loadConfig } = await import("../config/loader");
                 const cwd = command.optsWithGlobals().cwd || process.cwd();
                 const configPath = resolve(cwd, file);
 

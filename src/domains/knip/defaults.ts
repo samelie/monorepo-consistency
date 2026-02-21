@@ -1,4 +1,5 @@
-import { isArray, mergeWith } from "lodash";
+import isArray from "lodash/isArray";
+import mergeWith from "lodash/mergeWith";
 
 // Local type alias to avoid importing the huge knip package at build time
 type KnipConfig = Record<string, unknown>;
@@ -33,7 +34,6 @@ export const defaultKnipConfig: KnipConfig = {
         "**/*.stories.*",
         "**/dev-dist/**",
         "**/mocks/handlers.ts",
-        "**/tailwind.config.ts",
         "**/vite-env.d.ts",
         "**/examples/**",
         "**/dist/**",
@@ -84,15 +84,25 @@ export const defaultKnipConfig: KnipConfig = {
     workspaces: {},
 };
 
+const arrayMerger = (objValue: unknown, srcValue: unknown) => {
+    if (isArray(objValue) && isArray(srcValue)) {
+        return objValue.concat(srcValue);
+    }
+    return undefined;
+};
+
 /**
  * Creates a Knip configuration by deep merging defaults with overrides.
  * Arrays are concatenated instead of replaced.
+ *
+ * Merge order: internal defaults → schemaDefaults → overrides
  */
-export function defineKnipConfig(overrides: KnipConfig = {}): KnipConfig {
-    return mergeWith({}, defaultKnipConfig, overrides, (objValue, srcValue) => {
-        if (isArray(objValue) && isArray(srcValue)) {
-            return objValue.concat(srcValue);
-        }
-        return undefined;
-    });
+export function defineKnipConfig(
+    overrides: KnipConfig = {},
+    schemaDefaults?: KnipConfig,
+): KnipConfig {
+    const base = schemaDefaults
+        ? mergeWith({}, defaultKnipConfig, schemaDefaults, arrayMerger)
+        : defaultKnipConfig;
+    return mergeWith({}, base, overrides, arrayMerger);
 }

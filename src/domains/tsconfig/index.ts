@@ -1,15 +1,15 @@
-import type { TsconfigGenerateOptions, TsconfigType } from "../../runners/tsconfig.js";
-import type { CheckResult, CommandOptions, Issue } from "../../types/index.js";
+import type { TsconfigGenerateOptions, TsconfigType } from "../../runners/tsconfig";
+import type { CheckResult, CommandOptions, Issue } from "../../types/index";
 import { existsSync, readFileSync } from "node:fs";
 import { join, parse } from "node:path";
 import glob from "fast-glob";
-import { ConfigManager } from "../../config/loader.js";
+import { ConfigManager } from "../../config/loader";
 import {
     generateTsconfigs,
 
-} from "../../runners/tsconfig.js";
-import * as logger from "../../utils/logger.js";
-import { getWorkspaceInfo } from "../../utils/workspace.js";
+} from "../../runners/tsconfig";
+import * as logger from "../../utils/logger";
+import { getWorkspaceInfo } from "../../utils/workspace";
 
 interface TsconfigGenerateCommandOptions extends CommandOptions {
     force?: boolean;
@@ -42,12 +42,22 @@ const generate = async (
     try {
         const workspace = await getWorkspaceInfo(options.cwd);
 
+        // Read schema config from ConfigManager (may not be initialized)
+        let schemaConfig;
+        try {
+            const configManager = ConfigManager.getInstance();
+            schemaConfig = configManager.getConfig()?.tsconfig;
+        } catch {
+            // Config not initialized — proceed without schema overrides
+        }
+
         const generateOptions: TsconfigGenerateOptions = {
             rootDir: workspace.root,
             ...(options.type ? { types: [options.type] } : {}),
             ...(options.dryRun !== undefined ? { dryRun: options.dryRun } : {}),
             ...(options.force !== undefined ? { force: options.force } : {}),
             ...(options.verbose !== undefined ? { verbose: options.verbose } : {}),
+            ...(schemaConfig ? { schemaConfig } : {}),
         };
 
         const result = await generateTsconfigs(generateOptions);
@@ -255,9 +265,9 @@ const check = async (options: TsconfigCheckOptions): Promise<CheckResult> => {
             const dir = parse(pkgPath).dir;
             const fullDir = join(workspace.root, dir);
 
-            // Skip root config directory
+            // Skip root config directory (deprecated field, kept for compat)
             const rootConfigDir = tsconfigConfig?.rootConfigDir ?? "packages/config";
-            if (dir === rootConfigDir) {
+            if (rootConfigDir && dir === rootConfigDir) {
                 continue;
             }
 

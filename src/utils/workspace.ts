@@ -1,4 +1,4 @@
-import type { PackageInfo, WorkspaceInfo } from "../types/index.js";
+import type { PackageInfo, WorkspaceInfo } from "../types/index";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";

@@ -54,36 +54,53 @@ const depsConfigSchema = z.object({
 });
 
 /**
+ * Reusable tsconfig content shape (compilerOptions, include, exclude, watchOptions)
+ */
+const tsconfigContentSchema = z.object({
+    compilerOptions: z.record(z.string(), z.unknown()).optional().describe("TypeScript compiler options overrides"),
+    include: z.array(z.string()).optional().describe("Include patterns"),
+    exclude: z.array(z.string()).optional().describe("Exclude patterns"),
+    watchOptions: z.record(z.string(), z.unknown()).optional().describe("Watch mode options"),
+});
+
+/**
  * TypeScript configuration management
  */
 const tsconfigConfigSchema = z.object({
     enabled: z.boolean().default(true).describe("Enable TypeScript config generation"),
-    types: z.array(z.enum(["web", "node", "builder"]))
+    generate: z.array(z.enum(["web", "node", "builder"]))
         .default(["web", "node", "builder"])
         .describe("Config types to generate"),
-    configLocations: z.array(z.string())
-        .default([
-            "../config",
-            "../../config",
-            "../packages/config",
-            "../../packages/config",
-            "../../../packages/config",
-            "../../../../packages/config",
-        ])
-        .describe("Possible locations for app-specific configs relative to a package"),
+    /** @deprecated Use `generate` instead */
+    types: z.array(z.enum(["web", "node", "builder"]))
+        .optional()
+        .describe("DEPRECATED: Use `generate` instead"),
     generateTypecheck: z.boolean().default(true).describe("Generate tsconfig.typecheck.json files"),
     excludePatterns: z.array(z.string())
         .default(["**/node_modules/**", "**/dist/**", "**/build/**"])
         .describe("Patterns to exclude when scanning for packages"),
-    rootConfigDir: z.string()
-        .default("packages/config")
-        .describe("Root config directory to skip during generation"),
+
+    // Consumer overrides — merged into generated tsconfigs
+    base: tsconfigContentSchema.optional().describe("Overrides applied to ALL generated tsconfigs"),
+    web: tsconfigContentSchema.optional().describe("Overrides for web tsconfigs"),
+    node: tsconfigContentSchema.optional().describe("Overrides for node tsconfigs"),
+    builder: tsconfigContentSchema.optional().describe("Overrides for builder tsconfigs"),
+    typecheck: z.object({
+        compilerOptions: z.record(z.string(), z.unknown()).optional().describe("Typecheck compiler options overrides"),
+    }).optional().describe("Overrides for tsconfig.typecheck.json"),
+
+    // Validation options (used by validate/check commands)
     validation: z.object({
         checkMissing: z.boolean().default(true).describe("Check for missing tsconfig.json files"),
         checkExtends: z.boolean().default(true).describe("Validate extends chains"),
         checkConsistency: z.boolean().default(true).describe("Check compiler options consistency"),
         strictMode: z.boolean().default(false).describe("Enforce strict validation rules"),
     }).optional().describe("Validation options"),
+
+    /** @deprecated Ignored — internal defaults used instead */
+    configLocations: z.array(z.string()).optional().describe("DEPRECATED: Ignored, internal defaults used"),
+    /** @deprecated Ignored — internal defaults used instead */
+    rootConfigDir: z.string().optional().describe("DEPRECATED: Ignored, internal defaults used"),
 });
 
 /**
@@ -153,6 +170,10 @@ const knipConfigSchema = z.object({
     enabled: z.boolean().default(true).describe("Enable knip config generation"),
     frameworkDetection: z.boolean().default(true).describe("Auto-detect framework for knip config"),
     addScriptToPackageJson: z.boolean().default(true).describe("Add knip script to package.json"),
+    defaults: z.record(z.string(), z.unknown()).optional()
+        .describe("Base knip overrides applied to ALL packages"),
+    packages: z.record(z.string(), z.record(z.string(), z.unknown())).optional()
+        .describe("Per-package knip overrides keyed by package name"),
 });
 
 /**
@@ -216,3 +237,5 @@ export type TazeConfig = z.infer<typeof tazeConfigSchema>;
 export type DepsConfig = z.infer<typeof depsConfigSchema>;
 export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
 export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;
+export type TsconfigContentConfig = z.infer<typeof tsconfigContentSchema>;
+export type KnipSchemaConfig = z.infer<typeof knipConfigSchema>;

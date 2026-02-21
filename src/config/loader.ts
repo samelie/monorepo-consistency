@@ -1,10 +1,10 @@
-import type { MonorepoConfig } from "./schema.js";
+import type { MonorepoConfig } from "./schema";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { z } from "zod/v3";
-import { configSchema } from "./schema.js";
+import { configSchema } from "./schema";
 
 /**
  * Configuration loader error
@@ -47,7 +47,7 @@ export class ConfigValidationError extends ConfigLoaderError {
 /**
  * Supported configuration file formats
  */
-const CONFIG_EXTENSIONS = [".json", ".js", ".mjs", ".ts", ".mts"] as const;
+const CONFIG_EXTENSIONS = [".json", "", ".mjs", ".ts", ".mts"] as const;
 type ConfigExtension = typeof CONFIG_EXTENSIONS[number];
 
 /**
@@ -109,7 +109,7 @@ async function loadConfigFile(filePath: string): Promise<unknown> {
             }
         }
 
-        case ".js":
+        case "":
         case ".mjs":
         case ".ts":
         case ".mts": {
@@ -229,6 +229,7 @@ function mergeConfigs(
             ...(result.deps || config.deps ? { deps: { ...result.deps, ...config.deps } } : {}),
             ...(result.tsconfig || config.tsconfig ? { tsconfig: { ...result.tsconfig, ...config.tsconfig } } : {}),
             ...(result.packageJson || config.packageJson ? { packageJson: { ...result.packageJson, ...config.packageJson } } : {}),
+            ...(result.knip || config.knip ? { knip: { ...result.knip, ...config.knip } } : {}),
             ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
             ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
         } as Partial<MonorepoConfig>;

@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command } from "commander";
-import { knipHandler } from "../domains/knip/index.js";
-import { logger } from "../utils/logger.js";
+import { knipHandler } from "../domains/knip/index";
+import { logger } from "../utils/logger";
 
 export function createKnipCommand(): Command {
     const knip = new Command("knip")

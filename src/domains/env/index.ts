@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
-import * as logger from "../../utils/logger.js";
+import * as logger from "../../utils/logger";
 
 async function copyToClipboard(text: string): Promise<void> {
     switch (process.platform) {

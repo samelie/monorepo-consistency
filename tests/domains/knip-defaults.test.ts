@@ -30,6 +30,11 @@ describe("knip defaults", () => {
             expect(ignore).toContain("**/.storybook/**");
         });
 
+        it("should not ignore tailwind.config.ts (let tailwind plugin handle it)", () => {
+            const ignore = defaultKnipConfig.ignore as string[];
+            expect(ignore).not.toContain("**/tailwind.config.ts");
+        });
+
         it("should have rules with expected severity levels", () => {
             const rules = defaultKnipConfig.rules as Record<string, string>;
             expect(rules.dependencies).toBe("error");
@@ -98,6 +103,15 @@ describe("knip defaults", () => {
             expect(ignoreBinaries).toContain("my-bin");
         });
 
+        it("should concatenate ignoreDependencies arrays", () => {
+            const config = defineKnipConfig({
+                ignoreDependencies: ["tailwindcss", "postcss"],
+            });
+            const ignoreDeps = config.ignoreDependencies as string[];
+            expect(ignoreDeps).toContain("tailwindcss");
+            expect(ignoreDeps).toContain("postcss");
+        });
+
         it("should deep merge nested objects", () => {
             const config = defineKnipConfig({
                 rules: {
@@ -108,6 +122,15 @@ describe("knip defaults", () => {
             const rules = config.rules as Record<string, string>;
             expect(rules.classMembers).toBe("error"); // overridden
             expect(rules.dependencies).toBe("error"); // kept from default
+        });
+
+        it("should merge plugin configs", () => {
+            const config = defineKnipConfig({
+                vite: { config: ["vite.config.ts"] },
+                tailwind: { entry: ["tailwind.config.ts"] },
+            });
+            expect(config.vite).toEqual({ config: ["vite.config.ts"] });
+            expect(config.tailwind).toEqual({ entry: ["tailwind.config.ts"] });
         });
 
         it("should add new top-level keys", () => {
@@ -156,6 +179,69 @@ describe("knip defaults", () => {
             expect(workspaces["packages/*"]).toEqual({
                 entry: ["src/main.ts"],
             });
+        });
+    });
+
+    describe("defineKnipConfig with schemaDefaults", () => {
+        it("should merge schema defaults between internal defaults and overrides", () => {
+            const config = defineKnipConfig(
+                { ignore: ["**/custom/**"] },
+                { ignoreDependencies: ["lodash"] },
+            );
+
+            const ignore = config.ignore as string[];
+            const ignoreDeps = config.ignoreDependencies as string[];
+
+            // Internal defaults present
+            expect(ignore).toContain("**/dist/**");
+            // Override present
+            expect(ignore).toContain("**/custom/**");
+            // Schema default present
+            expect(ignoreDeps).toContain("lodash");
+        });
+
+        it("should apply schema defaults scalars", () => {
+            const config = defineKnipConfig(
+                {},
+                { treatConfigHintsAsErrors: true },
+            );
+            expect(config.treatConfigHintsAsErrors).toBe(true);
+        });
+
+        it("should let overrides win over schema defaults", () => {
+            const config = defineKnipConfig(
+                { rules: { classMembers: "error" } },
+                { rules: { classMembers: "warn" } },
+            );
+            const rules = config.rules as Record<string, string>;
+            expect(rules.classMembers).toBe("error");
+        });
+
+        it("should concatenate arrays at both merge levels", () => {
+            const config = defineKnipConfig(
+                { ignore: ["**/override/**"] },
+                { ignore: ["**/schema/**"] },
+            );
+            const ignore = config.ignore as string[];
+            // All three sources
+            expect(ignore).toContain("**/dist/**"); // internal
+            expect(ignore).toContain("**/schema/**"); // schema
+            expect(ignore).toContain("**/override/**"); // override
+        });
+
+        it("should not mutate defaultKnipConfig", () => {
+            const originalIgnore = [...(defaultKnipConfig.ignore as string[])];
+            defineKnipConfig(
+                { ignore: ["**/a/**"] },
+                { ignore: ["**/b/**"] },
+            );
+            expect(defaultKnipConfig.ignore).toEqual(originalIgnore);
+        });
+
+        it("backward compat: single-arg still works", () => {
+            const config = defineKnipConfig({ eslint: true });
+            expect(config.eslint).toBe(true);
+            expect(config.rules).toEqual(defaultKnipConfig.rules);
         });
     });
 });

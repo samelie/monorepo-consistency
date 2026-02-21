@@ -1,6 +1,6 @@
-import type { Change, CheckResult, CommandOptions, ConfigType, FixResult, Issue } from "../../types/index.js";
-import * as logger from "../../utils/logger.js";
-import { getWorkspaceInfo } from "../../utils/workspace.js";
+import type { Change, CheckResult, CommandOptions, ConfigType, FixResult, Issue } from "../../types/index";
+import * as logger from "../../utils/logger";
+import { getWorkspaceInfo } from "../../utils/workspace";
 
 interface ConfigCheckOptions extends CommandOptions {
     tsconfig?: boolean;

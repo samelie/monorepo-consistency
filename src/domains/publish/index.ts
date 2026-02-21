@@ -3,8 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { $ } from "zx";
-import * as logger from "../../utils/logger.js";
-import { findWorkspaceRoot, loadPackageJson } from "../../utils/workspace.js";
+import * as logger from "../../utils/logger";
+import { findWorkspaceRoot, loadPackageJson } from "../../utils/workspace";
 
 interface InitPublicOptions {
     packageName: string;
@@ -30,7 +30,7 @@ const initPublic = async (options: InitPublicOptions): Promise<{ success: boolea
     let githubUsername = options.githubUsername;
     if (!githubUsername) {
         try {
-            const configManager = await import("../../config/loader.js");
+            const configManager = await import("../../config/loader");
             const config = configManager.ConfigManager.getInstance().getConfig();
             githubUsername = (config as Record<string, unknown> & { publish?: { githubUsername?: string } }).publish?.githubUsername;
         } catch {

@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { envHandler } from "../domains/env/index.js";
-import { logger } from "../utils/logger.js";
+import { envHandler } from "../domains/env/index";
+import { logger } from "../utils/logger";
 
 export function createEnvCommand(): Command {
     const env = new Command("env")

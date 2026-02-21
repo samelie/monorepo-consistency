@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-export interface TempWorkspaceOptions {
+interface TempWorkspaceOptions {
     /** Files to create: { 'path/to/file.json': 'content' } */
     files?: Record<string, string>;
     /** pnpm-workspace.yaml patterns */
@@ -101,15 +101,3 @@ export async function createTempWorkspace(
     return workspace;
 }
 
-/**
- * Create a workspace with packages and config loaded for testing
- */
-export async function createTestWorkspace(options: {
-    config: Partial<MonorepoConfig>;
-    packages: Record<string, Record<string, unknown>>;
-}): Promise<TempWorkspace> {
-    return createTempWorkspace({
-        config: options.config,
-        packages: options.packages,
-    });
-}

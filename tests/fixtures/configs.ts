@@ -62,15 +62,6 @@ export const consistencyConfig: Partial<MonorepoConfig> = {
     },
 };
 
-export const depsConfig: Partial<MonorepoConfig> = {
-    version: "1.0.0",
-    deps: {
-        taze: {
-            runner: "npx",
-        },
-    },
-};
-
 export const fullConfig: Partial<MonorepoConfig> = {
     version: "1.0.0",
     packageJson: {

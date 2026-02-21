@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command } from "commander";
-import { publishHandler } from "../domains/publish/index.js";
-import { logger } from "../utils/logger.js";
+import { publishHandler } from "../domains/publish/index";
+import { logger } from "../utils/logger";
 
 export function createPublishCommand(): Command {
     const publish = new Command("publish")

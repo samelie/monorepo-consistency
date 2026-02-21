@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command, Option } from "commander";
-import { tsconfigHandler } from "../domains/tsconfig/index.js";
-import { logger } from "../utils/logger.js";
+import { tsconfigHandler } from "../domains/tsconfig/index";
+import { logger } from "../utils/logger";
 
 /**
  * Format issue output for display

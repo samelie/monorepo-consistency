@@ -64,15 +64,6 @@ export const packageWithForbiddenFields = {
     bundleDependencies: [], // Forbidden field
 };
 
-export const internalPackage = {
-    name: "@internal/tools",
-    version: "1.0.0",
-    private: true,
-    scripts: {
-        // Should be ignored in patterns
-    },
-};
-
 export const packageWithDifferentLicense = {
     name: "@test/different-license",
     version: "1.0.0",
@@ -99,11 +90,3 @@ export const packageWithEngines = {
     },
 };
 
-export const privatePackage = {
-    name: "@test/private",
-    version: "1.0.0",
-    private: true,
-    scripts: {
-        dev: "vite",
-    },
-};

@@ -1,6 +1,6 @@
 import { $ } from "zx";
-import { ConfigManager } from "../../config/loader.js";
-import * as logger from "../../utils/logger.js";
+import { ConfigManager } from "../../config/loader";
+import * as logger from "../../utils/logger";
 
 interface BuildOptions {
     packages?: string[];

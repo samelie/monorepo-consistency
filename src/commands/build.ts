@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command } from "commander";
-import { buildHandler } from "../domains/build/index.js";
-import { logger } from "../utils/logger.js";
+import { buildHandler } from "../domains/build/index";
+import { logger } from "../utils/logger";
 
 export function createBuildCommand(): Command {
     const build = new Command("build")

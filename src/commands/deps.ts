@@ -1,7 +1,7 @@
 import process from "node:process";
 import { Command, Option } from "commander";
-import { depsHandler } from "../domains/deps/index.js";
-import { logger } from "../utils/logger.js";
+import { depsHandler } from "../domains/deps/index";
+import { logger } from "../utils/logger";
 
 export function createDepsCommand(): Command {
     const deps = new Command("deps")

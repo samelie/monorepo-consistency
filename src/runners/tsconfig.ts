@@ -1,9 +1,19 @@
+import type { TsconfigConfig } from "../config/schema";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, parse } from "node:path";
 import process from "node:process";
 import glob from "fast-glob";
-import { getTsconfig } from "get-tsconfig";
-import merge from "lodash/merge.js";
+import merge from "lodash/merge";
+import {
+    BASE_EXCLUDE,
+    BASE_INCLUDE,
+    BASE_WATCH_OPTIONS,
+    BUILDER_COMPILER_OPTIONS,
+    NODE_COMPILER_OPTIONS,
+    SUPERBASE_COMPILER_OPTIONS,
+    TYPECHECK_COMPILER_OPTIONS,
+    WEB_COMPILER_OPTIONS,
+} from "../domains/tsconfig/defaults";
 
 /**
  * TypeScript config generation options
@@ -23,6 +33,9 @@ export interface TsconfigGenerateOptions {
 
     /** Verbose logging */
     verbose?: boolean;
+
+    /** Schema config from ConfigManager */
+    schemaConfig?: TsconfigConfig;
 }
 
 export type TsconfigType = "web" | "node" | "builder";
@@ -45,95 +58,120 @@ interface GenerationError {
 }
 
 /**
- * TypeScript configuration templates resolved from config directory
+ * Safely read and parse a JSON file, returning {} on failure
  */
-interface ResolvedTemplates {
-    web: string;
-    node: string;
-    builder: string;
-    webTs: Record<string, unknown>;
-    nodeTs: Record<string, unknown>;
-    builderTs: Record<string, unknown>;
+function readJsonSafe(filePath: string): Record<string, unknown> {
+    try {
+        return JSON.parse(readFileSync(filePath, "utf-8")) as Record<string, unknown>;
+    } catch {
+        return {};
+    }
 }
 
 /**
- * Possible locations for app-specific configs relative to a package
+ * Build the base tsconfig (superbase + base) shared by web/node types
  */
-const POSSIBLE_APP_CONFIG_LOCATIONS = [
-    "../config",
-    "../../config",
-    "../packages/config",
-    "../../packages/config",
-    "../../../packages/config",
-    "../../../../packages/config",
-] as const;
+function buildBaseConfig(schema?: TsconfigConfig): Record<string, unknown> {
+    const base: Record<string, unknown> = {
+        compilerOptions: { ...SUPERBASE_COMPILER_OPTIONS },
+        include: [...BASE_INCLUDE],
+        exclude: [...BASE_EXCLUDE],
+        watchOptions: { ...BASE_WATCH_OPTIONS },
+    };
+
+    // Apply schema.tsconfig.base overrides
+    if (schema?.base) {
+        return merge({}, base, schema.base);
+    }
+    return base;
+}
 
 /**
- * Recursively extract and merge config from extends chain
+ * Build a web tsconfig
+ * Merge: base → WEB defaults → schema.web → local stub
  */
-function extractConfigFromExtends(
-    configPath: string,
-    accumulated: Record<string, unknown> = {},
+function buildWebConfig(
+    localStubPath: string,
+    schema?: TsconfigConfig,
 ): Record<string, unknown> {
-    const currentConfig = JSON.parse(readFileSync(configPath, "utf-8")) as {
-        extends?: string;
-        [key: string]: unknown;
-    };
-
-    if (currentConfig.extends) {
-        const extendedPath = join(parse(configPath).dir, currentConfig.extends);
-        accumulated = extractConfigFromExtends(extendedPath, accumulated);
-
-        const configToMerge = { ...currentConfig };
-        delete configToMerge.extends;
-        accumulated = merge(accumulated, configToMerge);
-    } else {
-        accumulated = merge(accumulated, currentConfig);
+    let config = buildBaseConfig(schema);
+    config = merge({}, config, { compilerOptions: { ...WEB_COMPILER_OPTIONS } });
+    if (schema?.web) {
+        config = merge({}, config, schema.web);
     }
-
-    return accumulated;
+    if (existsSync(localStubPath)) {
+        const local = readJsonSafe(localStubPath);
+        const { extends: _, ...rest } = local;
+        config = merge({}, config, rest);
+    }
+    delete config.extends;
+    return config;
 }
 
 /**
- * Find root config templates in the monorepo
+ * Build a node tsconfig
+ * Merge: base → NODE defaults → schema.node → local stub
  */
-function findRootTemplates(packageJsonFiles: string[]): ResolvedTemplates {
-    const rootTs: {
-        web: string;
-        node: string;
-        builder: string;
-    } = {
-        web: "",
-        node: "",
-        builder: "",
-    };
-
-    // Find shortest paths to each config type (closest to root)
-    for (const pjson of packageJsonFiles) {
-        const dir = parse(pjson).dir;
-        if (!dir.includes("/config")) continue;
-
-        const webTs = join(dir, "web.tsconfig.json");
-        const nodeTs = join(dir, "node.tsconfig.json");
-        const builderTs = join(dir, "builder.tsconfig.json");
-
-        if (existsSync(webTs) && (!rootTs.web || webTs.length < rootTs.web.length)) {
-            rootTs.web = webTs;
-        }
-        if (existsSync(nodeTs) && (!rootTs.node || nodeTs.length < rootTs.node.length)) {
-            rootTs.node = nodeTs;
-        }
-        if (existsSync(builderTs) && (!rootTs.builder || builderTs.length < rootTs.builder.length)) {
-            rootTs.builder = builderTs;
-        }
+function buildNodeConfig(
+    localStubPath: string,
+    schema?: TsconfigConfig,
+): Record<string, unknown> {
+    let config = buildBaseConfig(schema);
+    config = merge({}, config, { compilerOptions: { ...NODE_COMPILER_OPTIONS } });
+    if (schema?.node) {
+        config = merge({}, config, schema.node);
     }
+    if (existsSync(localStubPath)) {
+        const local = readJsonSafe(localStubPath);
+        const { extends: _, ...rest } = local;
+        config = merge({}, config, rest);
+    }
+    delete config.extends;
+    return config;
+}
 
-    return {
-        ...rootTs,
-        webTs: rootTs.web ? extractConfigFromExtends(rootTs.web) : {},
-        nodeTs: rootTs.node ? extractConfigFromExtends(rootTs.node) : {},
-        builderTs: rootTs.builder ? extractConfigFromExtends(rootTs.builder) : {},
+/**
+ * Build a builder tsconfig (standalone — no superbase/base)
+ * Merge: BUILDER defaults → schema.builder → local stub
+ */
+function buildBuilderConfig(
+    localStubPath: string,
+    schema?: TsconfigConfig,
+): Record<string, unknown> {
+    let config: Record<string, unknown> = {
+        compilerOptions: { ...BUILDER_COMPILER_OPTIONS },
     };
+    if (schema?.builder) {
+        config = merge({}, config, schema.builder);
+    }
+    if (existsSync(localStubPath)) {
+        const local = readJsonSafe(localStubPath);
+        const { extends: _, ...rest } = local;
+        config = merge({}, config, rest);
+    }
+    delete config.extends;
+    delete (config as Record<string, unknown>).references;
+    delete (config as Record<string, unknown>).watchOptions;
+    return config;
+}
+
+/**
+ * Build a typecheck tsconfig
+ * Merge: TYPECHECK defaults → schema.typecheck
+ */
+function buildTypecheckConfig(schema?: TsconfigConfig): Record<string, unknown> {
+    const config: Record<string, unknown> = {
+        extends: "./tsconfig.json",
+        compilerOptions: { ...TYPECHECK_COMPILER_OPTIONS },
+    };
+    if (schema?.typecheck?.compilerOptions) {
+        config.compilerOptions = merge(
+            {},
+            config.compilerOptions,
+            schema.typecheck.compilerOptions,
+        );
+    }
+    return config;
 }
 
 /**
@@ -142,7 +180,14 @@ function findRootTemplates(packageJsonFiles: string[]): ResolvedTemplates {
 export async function generateTsconfigs(
     options: TsconfigGenerateOptions,
 ): Promise<TsconfigGenerateResult> {
-    const { rootDir, types, dryRun = false, force: _force = false, verbose = false } = options;
+    const {
+        rootDir,
+        types,
+        dryRun = false,
+        force: _force = false,
+        verbose = false,
+        schemaConfig,
+    } = options;
 
     const result: TsconfigGenerateResult = {
         success: true,
@@ -150,21 +195,23 @@ export async function generateTsconfigs(
         errors: [],
     };
 
+    const excludePatterns = schemaConfig?.excludePatterns ?? [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/build/**",
+    ];
+
     // Find all package.json files
     const packageJsonFiles = await glob("**/package.json", {
         cwd: rootDir,
         absolute: false,
         onlyFiles: true,
-        ignore: ["**/node_modules/**", "**/dist/**", "**/build/**"],
+        ignore: excludePatterns,
     });
 
     if (verbose) {
         process.stdout.write(`${JSON.stringify(packageJsonFiles, null, 2)}\n`);
     }
-
-    // Find root templates (need absolute paths for this)
-    const absolutePackageJsonFiles = packageJsonFiles.map(p => join(rootDir, p));
-    const templates = findRootTemplates(absolutePackageJsonFiles);
 
     // Process each package
     for (const pjsonPath of packageJsonFiles) {
@@ -172,176 +219,130 @@ export async function generateTsconfigs(
         const targetTs = join(dir, "tsconfig.json");
         const targetTypecheck = join(dir, "tsconfig.typecheck.json");
 
-        // Skip the root config directory itself
-        if (dir === join(rootDir, "packages/config")) {
-            continue;
-        }
-
-        // Check for local config overrides
+        // Check for local type-signal stub files
         const localWebTs = join(dir, "web.tsconfig.json");
         const localNodeTs = join(dir, "node.tsconfig.json");
         const localBuilderTs = join(dir, "builder.tsconfig.json");
 
-        // Track if we generated a config for this package
         let generatedConfig = false;
 
-        // Try to find nearest config template
-        for (const relativeConfigPath of POSSIBLE_APP_CONFIG_LOCATIONS) {
-            const nearestWebTs = join(dir, relativeConfigPath, "web.tsconfig.json");
-            const nearestNodeTs = join(dir, relativeConfigPath, "node.tsconfig.json");
-            const nearestBuilderTs = join(dir, relativeConfigPath, "builder.tsconfig.json");
+        // Node config (checked first — node takes priority if both exist)
+        if (
+            existsSync(localNodeTs)
+            && (!types || types.includes("node"))
+        ) {
+            try {
+                const ts = buildNodeConfig(localNodeTs, schemaConfig);
 
-            // Node config
-            if (
-                existsSync(localNodeTs) &&
-                existsSync(nearestNodeTs) &&
-                (!types || types.includes("node"))
-            ) {
-                try {
-                    const extractedConfig = extractConfigFromExtends(nearestNodeTs);
-                    const localConfig = JSON.parse(readFileSync(localNodeTs, "utf-8"));
-                    const ts = merge({}, extractedConfig, localConfig);
-
-                    delete ts.extends;
-
-                    if (verbose) {
-                        process.stdout.write(`writing Node 🧪 ${targetTs} 📝 (base: ${nearestNodeTs})\n`);
-                    }
-
-                    if (!dryRun) {
-                        writeFileSync(targetTs, JSON.stringify(ts, null, 4), "utf-8");
-                    }
-
-                    result.generated.push({
-                        type: "node",
-                        path: targetTs,
-                        basePath: nearestNodeTs,
-                    });
-
-                    generatedConfig = true;
-                    break;
-                } catch (error) {
-                    result.errors.push({
-                        path: targetTs,
-                        error: String(error),
-                    });
-                    result.success = false;
+                if (verbose) {
+                    process.stdout.write(`writing Node ${targetTs} (internal defaults)\n`);
                 }
-            }
 
-            // Web config
-            if (
-                existsSync(localWebTs) &&
-                existsSync(nearestWebTs) &&
-                (!types || types.includes("web"))
-            ) {
-                try {
-                    const extractedConfig = extractConfigFromExtends(nearestWebTs);
-                    const localConfig = JSON.parse(readFileSync(localWebTs, "utf-8"));
-                    const ts = merge({}, extractedConfig, localConfig);
-
-                    delete ts.extends;
-
-                    if (verbose) {
-                        process.stdout.write(`writing Web 🕸️ ${targetTs} 📝 (base: ${nearestWebTs})\n`);
-                    }
-
-                    if (!dryRun) {
-                        writeFileSync(targetTs, JSON.stringify(ts, null, 4), "utf-8");
-                    }
-
-                    result.generated.push({
-                        type: "web",
-                        path: targetTs,
-                        basePath: nearestWebTs,
-                    });
-
-                    generatedConfig = true;
-                    break;
-                } catch (error) {
-                    result.errors.push({
-                        path: targetTs,
-                        error: String(error),
-                    });
-                    result.success = false;
+                if (!dryRun) {
+                    writeFileSync(targetTs, JSON.stringify(ts, null, 4), "utf-8");
                 }
-            }
 
-            // Builder config
-            if (
-                existsSync(localBuilderTs) &&
-                existsSync(nearestBuilderTs) &&
-                (!types || types.includes("builder"))
-            ) {
-                try {
-                    const ts = merge(
-                        {},
-                        getTsconfig(targetTs)?.config,
-                        templates.builderTs,
-                    );
+                result.generated.push({
+                    type: "node",
+                    path: targetTs,
+                    basePath: localNodeTs,
+                });
 
-                    delete ts.references;
-                    delete ts.watchOptions;
-                    delete ts.extends;
-
-                    if (verbose) {
-                        process.stdout.write(`writing Builder 🏗️ ${targetTs} 📝 (base: ${nearestBuilderTs})\n`);
-                    }
-
-                    if (!dryRun) {
-                        writeFileSync(localBuilderTs, JSON.stringify(ts, null, 4), "utf-8");
-                    }
-
-                    result.generated.push({
-                        type: "builder",
-                        path: localBuilderTs,
-                        basePath: nearestBuilderTs,
-                    });
-
-                    generatedConfig = true;
-                    break;
-                } catch (error) {
-                    if (verbose) {
-                        process.stdout.write(`writing Builder 🏗ERROR ${targetTs} ${localBuilderTs} ${nearestBuilderTs} ${error}\n`);
-                    }
-                    result.errors.push({
-                        path: localBuilderTs,
-                        error: String(error),
-                    });
-                    result.success = false;
-                }
+                generatedConfig = true;
+            } catch (error) {
+                result.errors.push({ path: targetTs, error: String(error) });
+                result.success = false;
             }
         }
 
-        // Write typecheck config once per package (only if we generated a main config)
-        if (generatedConfig) {
-            if (verbose) {
-                process.stdout.write(`writing TypeCheck 🔍 ${targetTypecheck} 📝\n`);
-            }
+        // Web config
+        if (
+            !generatedConfig
+            && existsSync(localWebTs)
+            && (!types || types.includes("web"))
+        ) {
+            try {
+                const ts = buildWebConfig(localWebTs, schemaConfig);
 
-            if (!dryRun) {
-                writeFileSync(
-                    targetTypecheck,
-                    JSON.stringify(
-                        {
-                            extends: "./tsconfig.json",
-                            compilerOptions: {
-                                noEmit: true,
-                                composite: false,
-                                declaration: false,
-                                declarationDir: null,
-                                emitDeclarationOnly: false,
-                                skipLibCheck: true,
-                            },
-                        },
-                        null,
-                        4,
-                    ),
-                    "utf-8",
-                );
+                if (verbose) {
+                    process.stdout.write(`writing Web ${targetTs} (internal defaults)\n`);
+                }
+
+                if (!dryRun) {
+                    writeFileSync(targetTs, JSON.stringify(ts, null, 4), "utf-8");
+                }
+
+                result.generated.push({
+                    type: "web",
+                    path: targetTs,
+                    basePath: localWebTs,
+                });
+
+                generatedConfig = true;
+            } catch (error) {
+                result.errors.push({ path: targetTs, error: String(error) });
+                result.success = false;
+            }
+        }
+
+        // Builder config (writes to builder.tsconfig.json, not tsconfig.json)
+        if (
+            existsSync(localBuilderTs)
+            && (!types || types.includes("builder"))
+        ) {
+            try {
+                const ts = buildBuilderConfig(localBuilderTs, schemaConfig);
+
+                if (verbose) {
+                    process.stdout.write(`writing Builder ${localBuilderTs} (internal defaults)\n`);
+                }
+
+                if (!dryRun) {
+                    writeFileSync(localBuilderTs, JSON.stringify(ts, null, 4), "utf-8");
+                }
+
+                result.generated.push({
+                    type: "builder",
+                    path: localBuilderTs,
+                    basePath: localBuilderTs,
+                });
+
+                generatedConfig = true;
+            } catch (error) {
+                result.errors.push({ path: localBuilderTs, error: String(error) });
+                result.success = false;
+            }
+        }
+
+        // Write typecheck config (only if we generated a main tsconfig.json)
+        if (generatedConfig) {
+            const generateTypecheck = schemaConfig?.generateTypecheck ?? true;
+
+            if (generateTypecheck) {
+                if (verbose) {
+                    process.stdout.write(`writing TypeCheck ${targetTypecheck}\n`);
+                }
+
+                if (!dryRun) {
+                    const typecheckConfig = buildTypecheckConfig(schemaConfig);
+                    writeFileSync(
+                        targetTypecheck,
+                        JSON.stringify(typecheckConfig, null, 4),
+                        "utf-8",
+                    );
+                }
             }
         }
     }
 
     return result;
 }
+
+// Re-export build functions for testing
+export {
+    buildBaseConfig,
+    buildBuilderConfig,
+    buildNodeConfig,
+    buildTypecheckConfig,
+    buildWebConfig,
+};
