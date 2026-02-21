@@ -64,6 +64,14 @@
     "npm": ">= 11"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    },
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
   }
 }
