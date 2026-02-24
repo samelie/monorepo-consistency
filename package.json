@@ -1,6 +1,6 @@
 {
   "name": "@adddog/monorepo-consistency",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "type": "module",
   "bin": {
     "mono": "./dist/cli.mjs"
