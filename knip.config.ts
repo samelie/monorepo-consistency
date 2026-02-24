@@ -3,10 +3,10 @@
 import { defineKnipConfig } from "@adddog/monorepo-consistency";
 
 export default defineKnipConfig({
-    entry: ["src/index.ts","src/cli.ts","bin/*.{ts,js}"],
-    project: ["src/**/*.ts","bin/**/*.{ts,js}"],
+    entry: ["src/index.ts", "src/cli.ts", "bin/*.{ts,js}"],
+    project: ["src/**/*.ts", "bin/**/*.{ts,js}"],
 }, {
-    "ignoreDependencies": [
-        "@adddog/zod-to-json-schema"
-    ]
+    ignoreDependencies: [
+        "@adddog/zod-to-json-schema",
+    ],
 });

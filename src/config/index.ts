@@ -22,6 +22,7 @@ export {
 } from "./loader";
 
 export {
+    type CircularConfig,
     configSchema,
     type DepsConfig,
     type KnipSchemaConfig,

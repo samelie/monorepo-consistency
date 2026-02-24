@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import process from "node:process";
 import { Command } from "commander";
 import { question } from "zx";
-import { createConfigTemplate } from "../config/json-schema";
+import { createConfigTemplate, writeJsonSchemaToFile } from "../config/json-schema";
 import { logger } from "../utils/logger";
 
 interface InitOptions {
@@ -173,12 +173,15 @@ export function createInitCommand(): Command {
                 // Write configuration file
                 writeFileSync(outputPath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
 
+                // Generate JSON schema alongside the config
+                const schemaPath = writeJsonSchemaToFile(resolve(cwd, "monorepo.schema.json"));
+                logger.success(`JSON schema generated: ${schemaPath}`);
+
                 logger.success(`\n✓ Configuration file created: ${outputPath}`);
                 logger.info("\nNext steps:");
                 logger.info("  1. Review and customize monorepo.config.json");
-                logger.info("  2. Run: mono schema --format json  (to generate JSON schema)");
-                logger.info("  3. Run: mono tsconfig generate  (to generate TypeScript configs)");
-                logger.info("  4. Run: mono packagejson check  (to check package.json hygiene)");
+                logger.info("  2. Run: mono tsconfig generate  (to generate TypeScript configs)");
+                logger.info("  3. Run: mono packagejson check  (to check package.json hygiene)");
             } catch (error) {
                 logger.error(`Failed to initialize configuration: ${String(error)}`);
                 process.exit(1);

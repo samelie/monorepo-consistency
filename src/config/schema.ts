@@ -170,10 +170,39 @@ const knipConfigSchema = z.object({
     enabled: z.boolean().default(true).describe("Enable knip config generation"),
     frameworkDetection: z.boolean().default(true).describe("Auto-detect framework for knip config"),
     addScriptToPackageJson: z.boolean().default(true).describe("Add knip script to package.json"),
-    defaults: z.record(z.string(), z.unknown()).optional()
-        .describe("Base knip overrides applied to ALL packages"),
-    packages: z.record(z.string(), z.record(z.string(), z.unknown())).optional()
-        .describe("Per-package knip overrides keyed by package name"),
+    defaults: z.record(z.string(), z.unknown()).optional().describe("Base knip overrides applied to ALL packages"),
+    packages: z.record(z.string(), z.record(z.string(), z.unknown())).optional().describe("Per-package knip overrides keyed by package name"),
+});
+
+/**
+ * Circular dependency detection configuration
+ */
+const circularConfigSchema = z.object({
+    enabled: z.boolean().default(true).describe("Enable circular dependency detection"),
+    intraPackage: z.boolean().default(true).describe("Scan for module-level circular imports within packages"),
+    interPackage: z.boolean().default(true).describe("Scan for workspace:* dependency cycles between packages"),
+    intraPackageSeverity: z.enum(["low", "medium", "high", "critical"]).default("high").describe("Severity for intra-package circular imports"),
+    interPackageSeverity: z.enum(["low", "medium", "high", "critical"]).default("critical").describe("Severity for inter-package circular dependencies"),
+    tools: z.array(z.enum(["dpdm", "madge"])).default(["dpdm", "madge"]).describe("Tools to use for intra-package detection"),
+    ignoreCycles: z.array(z.object({
+        pattern: z.string().describe("File path glob pattern to ignore"),
+        package: z.string().optional().describe("Package name glob to scope the ignore rule"),
+        reason: z.string().optional().describe("Reason for ignoring this cycle"),
+    })).default([]).describe("Known intra-package cycles to ignore"),
+    ignorePackageCycles: z.array(
+        z.array(z.string()).min(2),
+    ).default([]).describe("Known inter-package cycles to ignore (arrays of package names)"),
+    dpdm: z.object({
+        skipDynamicImports: z.boolean().default(true).describe("Skip dynamic import() expressions"),
+        skipTypeOnly: z.boolean().default(true).describe("Skip type-only imports"),
+        tsconfig: z.string().optional().describe("Path to tsconfig for dpdm"),
+    }).optional().describe("dpdm tool options"),
+    madge: z.object({
+        tsconfig: z.string().optional().describe("Path to tsconfig for madge"),
+        fileExtensions: z.array(z.string()).default(["ts", "tsx", "js", "jsx"]).describe("File extensions to scan"),
+    }).optional().describe("madge tool options"),
+    includePackages: z.array(z.string()).default([]).describe("Only scan these packages (glob patterns)"),
+    excludePackages: z.array(z.string()).default([]).describe("Exclude these packages from scanning (glob patterns)"),
 });
 
 /**
@@ -200,6 +229,7 @@ export const configSchema = z.object({
 
     // Domain configurations
     build: buildConfigSchema.optional().describe("Build configuration"),
+    circular: circularConfigSchema.optional().describe("Circular dependency detection configuration"),
     deps: depsConfigSchema.optional().describe("Dependency management configuration"),
     knip: knipConfigSchema.optional().describe("Knip dead-code analysis configuration"),
     packageJson: packageJsonConfigSchema.optional().describe("Package.json hygiene configuration"),
@@ -238,4 +268,5 @@ export type DepsConfig = z.infer<typeof depsConfigSchema>;
 export type PackageJsonConfig = z.infer<typeof packageJsonConfigSchema>;
 export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;
 export type TsconfigContentConfig = z.infer<typeof tsconfigContentSchema>;
+export type CircularConfig = z.infer<typeof circularConfigSchema>;
 export type KnipSchemaConfig = z.infer<typeof knipConfigSchema>;

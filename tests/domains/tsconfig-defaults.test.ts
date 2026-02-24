@@ -1,22 +1,20 @@
-import { describe, expect, it } from "vitest";
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
-import {
-    buildBaseConfig,
-    buildBuilderConfig,
-    buildNodeConfig,
-    buildTypecheckConfig,
-    buildWebConfig,
-} from "../../src/runners/tsconfig.js";
 import {
     BASE_EXCLUDE,
     BASE_INCLUDE,
     BASE_WATCH_OPTIONS,
+    buildBaseConfig,
+    buildBuilderConfig,
     BUILDER_COMPILER_OPTIONS,
+    buildNodeConfig,
+    buildTypecheckConfig,
+    buildWebConfig,
     NODE_COMPILER_OPTIONS,
     SUPERBASE_COMPILER_OPTIONS,
     TYPECHECK_COMPILER_OPTIONS,
     WEB_COMPILER_OPTIONS,
-} from "../../src/domains/tsconfig/defaults.js";
+} from "@adddog/monorepo-consistency";
+
+import { describe, expect, it } from "vitest";
 
 describe("tsconfig internal defaults", () => {
     describe("buildBaseConfig", () => {

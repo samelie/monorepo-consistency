@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { createBuildCommand } from "./commands/build";
 import { createCiCommand } from "./commands/ci";
+import { createCircularCommand } from "./commands/circular";
 import { createConfigCommand } from "./commands/config";
 import { createDepsCommand } from "./commands/deps";
 import { createEnvCommand } from "./commands/env";
@@ -44,6 +45,7 @@ program
 
 // Register commands
 program.addCommand(createBuildCommand());
+program.addCommand(createCircularCommand());
 program.addCommand(createCiCommand());
 program.addCommand(createConfigCommand());
 program.addCommand(createDepsCommand());

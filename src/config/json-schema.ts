@@ -161,6 +161,18 @@ export function createConfigTemplate(): object {
                 removeInvalidFields: false,
             },
         },
+        circular: {
+            enabled: true,
+            intraPackage: true,
+            interPackage: true,
+            intraPackageSeverity: "high",
+            interPackageSeverity: "critical",
+            tools: ["dpdm", "madge"],
+            ignoreCycles: [],
+            ignorePackageCycles: [],
+            includePackages: [],
+            excludePackages: [],
+        },
         ci: {
             enabled: false,
             failOnWarning: false,

@@ -229,6 +229,7 @@ function mergeConfigs(
             ...(result.deps || config.deps ? { deps: { ...result.deps, ...config.deps } } : {}),
             ...(result.tsconfig || config.tsconfig ? { tsconfig: { ...result.tsconfig, ...config.tsconfig } } : {}),
             ...(result.packageJson || config.packageJson ? { packageJson: { ...result.packageJson, ...config.packageJson } } : {}),
+            ...(result.circular || config.circular ? { circular: { ...result.circular, ...config.circular } } : {}),
             ...(result.knip || config.knip ? { knip: { ...result.knip, ...config.knip } } : {}),
             ...(result.ci || config.ci ? { ci: { ...result.ci, ...config.ci } } : {}),
             ...(result.output || config.output ? { output: { ...result.output, ...config.output } } : {}),
