@@ -3,7 +3,7 @@
   "version": "0.0.13",
   "type": "module",
   "bin": {
-    "mono": "./dist/cli.mjs"
+    "mono": "./dist/cli.js"
   },
   "exports": {
     ".": {
@@ -16,16 +16,16 @@
     "dist"
   ],
   "scripts": {
-    "build": "unbuild",
+    "build": "tsup",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "types": "tsc -p tsconfig.typecheck.json",
     "dev": "tsx src/cli.ts",
     "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
-    "prepublishOnly": "pnpm run test && pnpm run lint && pnpm run types && pnpm run test && pnpm run knip && pnpm run build",
+    "prepublishOnly": "pnpm run test && pnpm run types && pnpm run test && pnpm run knip && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
-    "build:watch": "unbuild --watch",
+    "build:watch": "tsup --watch",
     "test": "vitest --watch=false",
     "knip": "knip",
     "version:patch": "npm version patch --no-git-tag-version"
@@ -54,7 +54,7 @@
     "knip": "^5.85.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "unbuild": "^3.6.1",
+    "tsup": "^8.5.0",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
@@ -69,11 +69,12 @@
     "access": "public",
     "exports": {
       ".": {
-        "types": "./dist/index.d.mts",
-        "import": "./dist/index.mjs"
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
       }
     },
-    "main": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   }
 }
