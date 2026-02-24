@@ -1,6 +1,6 @@
 {
   "name": "@adddog/monorepo-consistency",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "type": "module",
   "bin": {
     "mono": "./dist/cli.js"
@@ -57,6 +57,7 @@
     "tsup": "^8.5.0",
     "vitest": "^4.0.18"
   },
+  "bundledDeps": true,
   "peerDependencies": {
     "@vue/compiler-sfc": "^3.5.22"
   },

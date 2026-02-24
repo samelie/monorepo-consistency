@@ -24,16 +24,16 @@ declare module "madge" {
     }
 
     interface MadgeInstance {
-        obj(): Record<string, string[]>;
-        warnings(): { skipped: string[] };
-        circular(): string[][];
-        circularGraph(): Record<string, string[]>;
-        depends(id: string): string[];
-        orphans(): string[];
-        leaves(): string[];
-        dot(): Promise<string>;
-        image(imagePath: string, circular?: boolean): Promise<string>;
-        svg(): Promise<string>;
+        obj: () => Record<string, string[]>;
+        warnings: () => { skipped: string[] };
+        circular: () => string[][];
+        circularGraph: () => Record<string, string[]>;
+        depends: (id: string) => string[];
+        orphans: () => string[];
+        leaves: () => string[];
+        dot: () => Promise<string>;
+        image: (imagePath: string, circular?: boolean) => Promise<string>;
+        svg: () => Promise<string>;
     }
 
     function madge(
