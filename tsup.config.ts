@@ -1,8 +1,9 @@
 import { defineConfig } from "tsup";
 
-// Bundle everything except peer deps
-const noExternal = [/^(?!@vue\/compiler-sfc)/];
-const external = [/@vue\/compiler-sfc/];
+// Bundle everything except peer deps and deps unsafe to inline into ESM
+// (madge/dpdm transitively pull in CJS code that breaks in strict-mode ESM bundles)
+const noExternal = [/^(?!@vue\/compiler-sfc|madge$|dpdm)/];
+const external = [/@vue\/compiler-sfc/, /^madge$/, /^dpdm$/];
 
 // CJS deps (commander, etc.) use require() which doesn't exist in ESM.
 // Inject createRequire so esbuild's CJS interop shim works at runtime.
