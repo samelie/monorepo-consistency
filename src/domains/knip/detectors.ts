@@ -39,9 +39,33 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
         },
     },
     {
+        name: "nuxt",
+        detect: (files, deps) =>
+            files.some(f => f.match(/nuxt\.config\.(js|mjs|ts)$/)) ||
+            "nuxt" in deps,
+        config: {
+            entry: [
+                "nuxt.config.ts",
+                "app.config.ts",
+                "content.config.ts",
+                "app/app.vue",
+                "app/pages/**/*.vue",
+                "app/layouts/**/*.vue",
+                "app/components/**/*.vue",
+                "app/composables/**/*.ts",
+                "app/plugins/**/*.ts",
+                "app/middleware/**/*.ts",
+                "app/utils/**/*.ts",
+                "server/**/*.ts",
+            ],
+            project: ["**/*.{ts,vue}"],
+        },
+    },
+    {
         name: "vue-vite",
         detect: (files, deps) =>
-            files.some(f => f.match(/vite\.config\.(js|ts)$/)) && "vue" in deps,
+            (files.some(f => f.match(/vite\.config\.(js|ts)$/)) && "vue" in deps) ||
+            ("vue" in deps && ("@vitejs/plugin-vue" in deps || "vite" in deps)),
         config: {
             entry: ["src/main.ts", "src/index.ts"],
             project: ["src/**/*.{ts,vue}"],
@@ -63,7 +87,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
             "commander" in deps ||
             "yargs" in deps,
         config: {
-            entry: ["src/index.ts", "src/cli.ts", "bin/*.{ts,js}"],
+            entry: ["src/index.ts", "src/cli.ts", "src/cli/index.ts", "bin/*.{ts,js}"],
             project: ["src/**/*.ts", "bin/**/*.{ts,js}"],
         },
     },
@@ -133,8 +157,16 @@ export function augmentWithPlugins(
     }
 
     // Vue compiler
-    if (frameworkName === "vue-vite") {
+    if (frameworkName === "vue-vite" || frameworkName === "nuxt") {
         result.useVueCompiler = true;
+    }
+
+    // Nuxt auto-imports: these deps are used implicitly, not via import statements
+    if (frameworkName === "nuxt") {
+        const nuxtAutoImported = ["vue", "vue-router"];
+        for (const dep of nuxtAutoImported) {
+            if (dep in deps) ignoreDeps.push(dep);
+        }
     }
 
     if (ignoreDeps.length > 0) {

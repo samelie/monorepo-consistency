@@ -80,8 +80,6 @@ export const defaultKnipConfig: KnipConfig = {
         ],
         entry: ["**/*.{bench,test,test-d,spec}.?(c|m)[jt]s?(x)"],
     },
-
-    workspaces: {},
 };
 
 const arrayMerger = (objValue: unknown, srcValue: unknown) => {
