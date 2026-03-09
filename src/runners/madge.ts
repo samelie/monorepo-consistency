@@ -1,9 +1,9 @@
-export interface MadgeOptions {
+interface MadgeOptions {
     tsconfig?: string;
     fileExtensions?: string[];
 }
 
-export interface MadgeResult {
+interface MadgeResult {
     circular: string[][];
 }
 

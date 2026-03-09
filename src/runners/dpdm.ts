@@ -1,12 +1,12 @@
 import fg from "fast-glob";
 
-export interface DpdmOptions {
+interface DpdmOptions {
     skipDynamicImports?: boolean;
     skipTypeOnly?: boolean;
     tsconfig?: string;
 }
 
-export interface DpdmResult {
+interface DpdmResult {
     circular: string[][];
 }
 

@@ -45,7 +45,6 @@
     "zx": "^8.8.5"
   },
   "devDependencies": {
-    "@adddog/build-configs": "workspace:*",
     "@types/lodash": "^4.17.24",
     "@types/node": "^25.3.3",
     "@vitest/coverage-v8": "^4.0.18",
