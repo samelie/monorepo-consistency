@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import { z } from "zod/v3";
+import { z } from "zod/v4";
 import { configSchema } from "./schema";
 
 /**

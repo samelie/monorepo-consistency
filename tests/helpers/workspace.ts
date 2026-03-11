@@ -1,4 +1,4 @@
-import type { MonorepoConfig } from "@rad/..";
+import type { MonorepoConfig } from "@adddog/monorepo-consistency";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";

@@ -141,7 +141,7 @@ describe("augmentWithPlugins", () => {
 
     it("nuxt framework → useVueCompiler + nuxt ignoreDependencies", () => {
         const files = ["nuxt.config.ts", "app/app.vue", "app/pages/index.vue"];
-        const deps: Record<string, string> = { nuxt: "^4.0.0", vue: "^3.5.0", "vue-router": "^4.0.0" };
+        const deps: Record<string, string> = { "nuxt": "^4.0.0", "vue": "^3.5.0", "vue-router": "^4.0.0" };
         const result = augmentWithPlugins(files, deps, "nuxt", {
             entry: ["nuxt.config.ts", "app/app.vue"],
             project: ["**/*.{ts,vue}"],
@@ -153,7 +153,7 @@ describe("augmentWithPlugins", () => {
 
     it("vue + @vitejs/plugin-vue without vite.config → vue-vite detection", () => {
         const files = ["src/index.ts", "src/Map.vue"];
-        const deps: Record<string, string> = { vue: "^3.5.0", "@vitejs/plugin-vue": "^6.0.0", vite: "^7.0.0" };
+        const deps: Record<string, string> = { "vue": "^3.5.0", "@vitejs/plugin-vue": "^6.0.0", "vite": "^7.0.0" };
         const result = augmentWithPlugins(files, deps, "vue-vite", {
             entry: ["src/main.ts", "src/index.ts"],
             project: ["src/**/*.{ts,vue}"],

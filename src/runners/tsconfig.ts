@@ -1,8 +1,7 @@
 import type { TsconfigConfig } from "../config/schema";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, parse } from "node:path";
+import { join } from "node:path";
 import process from "node:process";
-import glob from "fast-glob";
 import merge from "lodash/merge";
 import {
     BASE_EXCLUDE,
@@ -36,6 +35,9 @@ export interface TsconfigGenerateOptions {
 
     /** Schema config from ConfigManager */
     schemaConfig?: TsconfigConfig;
+
+    /** Pre-resolved absolute package directories (avoids slow glob) */
+    packageDirs?: string[];
 }
 
 export type TsconfigType = "web" | "node" | "builder";
@@ -187,6 +189,7 @@ export async function generateTsconfigs(
         force: _force = false,
         verbose = false,
         schemaConfig,
+        packageDirs,
     } = options;
 
     const result: TsconfigGenerateResult = {
@@ -195,27 +198,15 @@ export async function generateTsconfigs(
         errors: [],
     };
 
-    const excludePatterns = schemaConfig?.excludePatterns ?? [
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/build/**",
-    ];
-
-    // Find all package.json files
-    const packageJsonFiles = await glob("**/package.json", {
-        cwd: rootDir,
-        absolute: false,
-        onlyFiles: true,
-        ignore: excludePatterns,
-    });
+    // Use pre-resolved package dirs if provided, otherwise include rootDir only
+    const dirs = packageDirs ?? [rootDir];
 
     if (verbose) {
-        process.stdout.write(`${JSON.stringify(packageJsonFiles, null, 2)}\n`);
+        process.stdout.write(`Processing ${dirs.length} package directories\n`);
     }
 
     // Process each package
-    for (const pjsonPath of packageJsonFiles) {
-        const dir = join(rootDir, parse(pjsonPath).dir);
+    for (const dir of dirs) {
         const targetTs = join(dir, "tsconfig.json");
         const targetTypecheck = join(dir, "tsconfig.typecheck.json");
 

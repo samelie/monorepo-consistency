@@ -1,8 +1,7 @@
 import type { TsconfigGenerateOptions, TsconfigType } from "../../runners/tsconfig";
 import type { CheckResult, CommandOptions, Issue } from "../../types/index";
 import { existsSync, readFileSync } from "node:fs";
-import { join, parse } from "node:path";
-import glob from "fast-glob";
+import { join, parse, relative } from "node:path";
 import { ConfigManager } from "../../config/loader";
 import {
     generateTsconfigs,
@@ -53,6 +52,7 @@ const generate = async (
 
         const generateOptions: TsconfigGenerateOptions = {
             rootDir: workspace.root,
+            packageDirs: workspace.packages.map(p => p.path),
             ...(options.type ? { types: [options.type] } : {}),
             ...(options.dryRun !== undefined ? { dryRun: options.dryRun } : {}),
             ...(options.force !== undefined ? { force: options.force } : {}),
@@ -127,19 +127,23 @@ const validate = async (options: TsconfigValidateOptions): Promise<CheckResult> 
         const checkExtends = tsconfigConfig?.validation?.checkExtends ?? true;
         const strictMode = options.strict ?? tsconfigConfig?.validation?.strictMode ?? false;
 
-        // Find all tsconfig.json files
-        const tsconfigFiles = options.files?.length
-            ? options.files
-            : await glob("**/tsconfig.json", {
-                    cwd: workspace.root,
-                    absolute: false,
-                    onlyFiles: true,
-                    ignore: tsconfigConfig?.excludePatterns ?? [
-                        "**/node_modules/**",
-                        "**/dist/**",
-                        "**/build/**",
-                    ],
-                });
+        // Find tsconfig.json files from known workspace packages (avoids traversing node_modules)
+        const tsconfigFiles: string[] = [];
+        if (options.files?.length) {
+            tsconfigFiles.push(...options.files);
+        } else {
+            for (const pkg of workspace.packages) {
+                const rel = relative(workspace.root, pkg.path);
+                const tsconfigPath = join(rel, "tsconfig.json");
+                if (existsSync(join(workspace.root, tsconfigPath))) {
+                    tsconfigFiles.push(tsconfigPath);
+                }
+            }
+            // Also check root tsconfig
+            if (existsSync(join(workspace.root, "tsconfig.json"))) {
+                tsconfigFiles.push("tsconfig.json");
+            }
+        }
 
         logger.debug(`Found ${tsconfigFiles.length} tsconfig files to validate`);
 
@@ -246,24 +250,12 @@ const check = async (options: TsconfigCheckOptions): Promise<CheckResult> => {
         const checkMissing = tsconfigConfig?.validation?.checkMissing ?? true;
         const generateTypecheck = tsconfigConfig?.generateTypecheck ?? true;
 
-        // Find all packages
-        const packageJsonFiles = await glob("**/package.json", {
-            cwd: workspace.root,
-            absolute: false,
-            onlyFiles: true,
-            ignore: tsconfigConfig?.excludePatterns ?? [
-                "**/node_modules/**",
-                "**/dist/**",
-                "**/build/**",
-            ],
-        });
+        logger.debug(`Checking ${workspace.packages.length} packages for TypeScript configurations`);
 
-        logger.debug(`Checking ${packageJsonFiles.length} packages for TypeScript configurations`);
-
-        // Check each package
-        for (const pkgPath of packageJsonFiles) {
-            const dir = parse(pkgPath).dir;
-            const fullDir = join(workspace.root, dir);
+        // Check each workspace package
+        for (const pkg of workspace.packages) {
+            const dir = relative(workspace.root, pkg.path);
+            const fullDir = pkg.path;
 
             // Skip root config directory (deprecated field, kept for compat)
             const rootConfigDir = tsconfigConfig?.rootConfigDir ?? "packages/config";
@@ -322,7 +314,7 @@ const check = async (options: TsconfigCheckOptions): Promise<CheckResult> => {
             }
         }
 
-        spinner.succeed(`Checked ${packageJsonFiles.length} packages`);
+        spinner.succeed(`Checked ${workspace.packages.length} packages`);
 
         return {
             success: issues.length === 0,

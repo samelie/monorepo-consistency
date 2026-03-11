@@ -1,4 +1,4 @@
-import type { MonorepoConfig } from "@rad/..";
+import type { MonorepoConfig } from "@adddog/monorepo-consistency";
 
 export const minimalConfig: Partial<MonorepoConfig> = {
     version: "1.0.0",
