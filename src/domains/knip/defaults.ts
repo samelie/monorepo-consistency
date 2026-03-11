@@ -84,7 +84,7 @@ export const defaultKnipConfig: KnipConfig = {
 
 const arrayMerger = (objValue: unknown, srcValue: unknown) => {
     if (isArray(objValue) && isArray(srcValue)) {
-        return objValue.concat(srcValue);
+        return [...objValue, ...srcValue];
     }
     return undefined;
 };

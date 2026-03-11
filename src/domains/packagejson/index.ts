@@ -222,8 +222,7 @@ const checkConsistency = async (options: PackageJsonCheckOptions): Promise<Issue
 
     // If multiple licenses found, report inconsistency
     if (consistencyConfig.checkLicense && licenses.size > 1) {
-        const licenseList = Array.from(licenses.entries())
-            .map(([license, pkgs]) => `${license} (${pkgs.length} packages)`)
+        const licenseList = Array.from(licenses.entries(), ([license, pkgs]) => `${license} (${pkgs.length} packages)`)
             .join(", ");
 
         issues.push({
