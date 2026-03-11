@@ -6,6 +6,8 @@ import { ConfigLoaderError, ConfigManager, loadConfig, loadConfigSync } from "..
 import { fullConfig, minimalConfig, scriptEnforcementConfig } from "../fixtures/configs.js";
 import { createTempWorkspace } from "../helpers/workspace.js";
 
+const VALIDATION_FAILED_RE = /validation failed/i;
+
 describe("config loader", () => {
     let workspace: TempWorkspace;
 
@@ -177,7 +179,7 @@ describe("config loader", () => {
                 loadConfig({
                     configPath: workspace.path("invalid.json"),
                 }),
-            ).rejects.toThrow(/validation failed/i);
+            ).rejects.toThrow(VALIDATION_FAILED_RE);
         });
 
         it("should merge with defaults", async () => {

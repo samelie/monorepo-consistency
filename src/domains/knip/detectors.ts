@@ -22,6 +22,15 @@ interface FrameworkDetector {
     config: WorkspaceConfig;
 }
 
+const NEXT_CONFIG_RE = /next\.config\.(js|mjs|ts)$/;
+const NUXT_CONFIG_RE = /nuxt\.config\.(js|mjs|ts)$/;
+const VITE_CONFIG_RE = /vite\.config\.(js|ts)$/;
+const CLI_RE = /cli\.(ts|js)$/;
+const WORKER_RE = /\.worker\.(ts|js)$/;
+const VITE_CONFIG_FULL_RE = /^vite\.config\.(?:js|ts|mjs|mts)$/;
+const TAILWIND_CONFIG_RE = /^tailwind\.config\.(?:js|ts|cjs|mjs)$/;
+const POSTCSS_CONFIG_RE = /^postcss\.config\.(?:js|ts|cjs|mjs)$/;
+
 const DEFAULT_CONFIG: WorkspaceConfig = {
     entry: ["src/index.ts"],
     project: ["src/**/*.ts"],
@@ -31,7 +40,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
     {
         name: "next",
         detect: (files, deps) =>
-            files.some(f => f.match(/next\.config\.(js|mjs|ts)$/)) ||
+            files.some(f => f.match(NEXT_CONFIG_RE)) ||
             "next" in deps,
         config: {
             entry: ["src/index.ts", "app/**/*.{ts,tsx}", "pages/**/*.{ts,tsx}"],
@@ -41,7 +50,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
     {
         name: "nuxt",
         detect: (files, deps) =>
-            files.some(f => f.match(/nuxt\.config\.(js|mjs|ts)$/)) ||
+            files.some(f => f.match(NUXT_CONFIG_RE)) ||
             "nuxt" in deps,
         config: {
             entry: [
@@ -64,7 +73,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
     {
         name: "vue-vite",
         detect: (files, deps) =>
-            (files.some(f => f.match(/vite\.config\.(js|ts)$/)) && "vue" in deps) ||
+            (files.some(f => f.match(VITE_CONFIG_RE)) && "vue" in deps) ||
             ("vue" in deps && ("@vitejs/plugin-vue" in deps || "vite" in deps)),
         config: {
             entry: ["src/main.ts", "src/index.ts"],
@@ -73,7 +82,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
     },
     {
         name: "vite",
-        detect: files => files.some(f => f.match(/vite\.config\.(js|ts)$/)),
+        detect: files => files.some(f => f.match(VITE_CONFIG_RE)),
         config: {
             entry: ["src/main.ts", "src/main.tsx", "src/index.ts", "src/index.tsx"],
             project: ["src/**/*.{ts,tsx}"],
@@ -83,7 +92,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
         name: "cli",
         detect: (files, deps) =>
             files.some(f => f.includes("bin/")) ||
-            files.some(f => f.match(/cli\.(ts|js)$/)) ||
+            files.some(f => f.match(CLI_RE)) ||
             "commander" in deps ||
             "yargs" in deps,
         config: {
@@ -103,7 +112,7 @@ const FRAMEWORK_DETECTORS: FrameworkDetector[] = [
     {
         name: "worker",
         detect: files =>
-            files.some(f => f.match(/\.worker\.(ts|js)$/)) ||
+            files.some(f => f.match(WORKER_RE)) ||
             files.some(f => f.includes("workers/")),
         config: {
             entry: ["src/index.ts", "src/**/*.worker.ts"],
@@ -126,13 +135,13 @@ export function augmentWithPlugins(
     const ignoreDeps: string[] = [];
 
     // Vite config detection
-    const viteConfig = files.find(f => /^vite\.config\.(?:js|ts|mjs|mts)$/.test(f));
+    const viteConfig = files.find(f => VITE_CONFIG_FULL_RE.test(f));
     if (viteConfig) {
         result.vite = { config: [viteConfig] };
     }
 
     // Tailwind v3: config file exists → let knip's tailwind plugin handle it
-    const tailwindConfig = files.find(f => /^tailwind\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+    const tailwindConfig = files.find(f => TAILWIND_CONFIG_RE.test(f));
     if (tailwindConfig) {
         result.tailwind = { entry: [tailwindConfig] };
     }
@@ -143,12 +152,12 @@ export function augmentWithPlugins(
         if ("tailwindcss" in deps) ignoreDeps.push("tailwindcss");
         if ("@tailwindcss/postcss" in deps) ignoreDeps.push("@tailwindcss/postcss");
         // postcss without its own config → undiscoverable
-        const postcssConfig = files.find(f => /^postcss\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+        const postcssConfig = files.find(f => POSTCSS_CONFIG_RE.test(f));
         if ("postcss" in deps && !postcssConfig) ignoreDeps.push("postcss");
     }
 
     // PostCSS config detection
-    const postcssConfig = files.find(f => /^postcss\.config\.(?:js|ts|cjs|mjs)$/.test(f));
+    const postcssConfig = files.find(f => POSTCSS_CONFIG_RE.test(f));
     if (postcssConfig) {
         result.postcss = { config: [postcssConfig] };
     } else if ("postcss" in deps && !hasTailwindVite) {
