@@ -34,7 +34,13 @@ export default defineConfig([
         banner: esmBanner,
         treeshake: true,
         splitting: false,
-        dts: true,
+        dts: {
+            compilerOptions: {
+                // tsup internally sets baseUrl in its temp tsconfig for DTS,
+                // which TS6 treats as a deprecated option error
+                ignoreDeprecations: "6.0",
+            },
+        },
     },
     // Library API — CJS (no banner needed, require() is native)
     {
