@@ -6,7 +6,7 @@ describe("knip defaults", () => {
     describe("defaultKnipConfig", () => {
         it("should have a $schema field", () => {
             expect(defaultKnipConfig.$schema).toBe(
-                "https://unpkg.com/knip@5/schema.json",
+                "https://unpkg.com/knip@6/schema.json",
             );
         });
 
@@ -15,19 +15,12 @@ describe("knip defaults", () => {
         });
 
         it("should have default entry and project arrays", () => {
-            expect(defaultKnipConfig.entry).toEqual(["knip.config.ts"]);
-            expect(defaultKnipConfig.project).toEqual([
-                "knip.config.ts",
-                "eslint.config.mjs",
-            ]);
+            expect(defaultKnipConfig.entry).toEqual([]);
+            expect(defaultKnipConfig.project).toEqual([]);
         });
 
-        it("should have ignore patterns for common generated files", () => {
-            const ignore = defaultKnipConfig.ignore as string[];
-            expect(ignore).toContain("**/dist/**");
-            expect(ignore).toContain("**/knip.config.ts");
-            expect(ignore).toContain("**/eslint.config.mjs");
-            expect(ignore).toContain("**/.storybook/**");
+        it("should have empty ignore array (patterns added per-package)", () => {
+            expect(defaultKnipConfig.ignore).toEqual([]);
         });
 
         it("should not ignore tailwind.config.ts (let tailwind plugin handle it)", () => {
@@ -41,7 +34,6 @@ describe("knip defaults", () => {
             expect(rules.unlisted).toBe("error");
             expect(rules.files).toBe("error");
             expect(rules.exports).toBe("error");
-            expect(rules.classMembers).toBe("off");
             expect(rules.nsExports).toBe("off");
         });
 
@@ -97,8 +89,7 @@ describe("knip defaults", () => {
             const ignore = config.ignore as string[];
             const ignoreBinaries = config.ignoreBinaries as string[];
 
-            // Should have both defaults and overrides
-            expect(ignore).toContain("**/dist/**");
+            // Should have overrides concatenated with (empty) defaults
             expect(ignore).toContain("**/custom/**");
             expect(ignoreBinaries).toContain("my-bin");
         });
@@ -115,12 +106,12 @@ describe("knip defaults", () => {
         it("should deep merge nested objects", () => {
             const config = defineKnipConfig({
                 rules: {
-                    classMembers: "error",
+                    exports: "warn",
                 },
             });
 
             const rules = config.rules as Record<string, string>;
-            expect(rules.classMembers).toBe("error"); // overridden
+            expect(rules.exports).toBe("warn"); // overridden
             expect(rules.dependencies).toBe("error"); // kept from default
         });
 
@@ -192,8 +183,6 @@ describe("knip defaults", () => {
             const ignore = config.ignore as string[];
             const ignoreDeps = config.ignoreDependencies as string[];
 
-            // Internal defaults present
-            expect(ignore).toContain("**/dist/**");
             // Override present
             expect(ignore).toContain("**/custom/**");
             // Schema default present
@@ -210,11 +199,11 @@ describe("knip defaults", () => {
 
         it("should let overrides win over schema defaults", () => {
             const config = defineKnipConfig(
-                { rules: { classMembers: "error" } },
-                { rules: { classMembers: "warn" } },
+                { rules: { exports: "error" } },
+                { rules: { exports: "warn" } },
             );
             const rules = config.rules as Record<string, string>;
-            expect(rules.classMembers).toBe("error");
+            expect(rules.exports).toBe("error");
         });
 
         it("should concatenate arrays at both merge levels", () => {
@@ -223,8 +212,7 @@ describe("knip defaults", () => {
                 { ignore: ["**/schema/**"] },
             );
             const ignore = config.ignore as string[];
-            // All three sources
-            expect(ignore).toContain("**/dist/**"); // internal
+            // Schema + override sources (defaults are empty)
             expect(ignore).toContain("**/schema/**"); // schema
             expect(ignore).toContain("**/override/**"); // override
         });

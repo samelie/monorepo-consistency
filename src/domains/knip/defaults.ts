@@ -8,36 +8,20 @@ type KnipConfig = Record<string, unknown>;
  * Default Knip configuration with best practices for monorepo setups
  */
 export const defaultKnipConfig: KnipConfig = {
-    $schema: "https://unpkg.com/knip@5/schema.json",
+    $schema: "https://unpkg.com/knip@6/schema.json",
 
     treatConfigHintsAsErrors: false,
 
     // Disable ESLint plugin to avoid "config.flatMap is not a function" error
     eslint: false,
 
-    entry: [
-        "knip.config.ts",
-    ],
+    entry: [],
 
-    project: [
-        "knip.config.ts",
-        "eslint.config.mjs",
-    ],
+    project: [],
 
     paths: {},
 
-    ignore: [
-        "**/knip.config.ts",
-        "**/eslint.config.mjs",
-        "**.eslintrc*",
-        "**/.storybook/**",
-        "**/*.stories.*",
-        "**/dev-dist/**",
-        "**/mocks/handlers.ts",
-        "**/vite-env.d.ts",
-        "**/examples/**",
-        "**/dist/**",
-    ],
+    ignore: [],
 
     ignoreBinaries: [],
 
@@ -57,7 +41,6 @@ export const defaultKnipConfig: KnipConfig = {
         exports: "error",
         types: "error",
         enumMembers: "error",
-        classMembers: "off",
         nsExports: "off",
         nsTypes: "off",
         duplicates: "error",
