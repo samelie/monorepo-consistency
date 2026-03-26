@@ -23,7 +23,6 @@
     "dev": "tsx src/cli.ts",
     "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
-    "prepublishOnly": "pnpm run test && pnpm run types && pnpm run build",
     "prepack": "pnpm run prepublishOnly",
     "build:watch": "tsup --watch",
     "test": "vitest --watch=false",
@@ -76,5 +75,6 @@
     },
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts"
-  }
+  },
+  "private": true
 }
