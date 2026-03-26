@@ -2,7 +2,7 @@ import type { TsconfigConfig } from "../config/schema";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
-import merge from "lodash/merge";
+import mergeWith from "lodash/mergeWith";
 import {
     BASE_EXCLUDE,
     BASE_INCLUDE,
@@ -60,6 +60,33 @@ interface GenerationError {
 }
 
 /**
+ * Recursively delete keys whose value is null (explicit deletion signal)
+ */
+function stripNulls(obj: Record<string, unknown>): void {
+    for (const key of Object.keys(obj)) {
+        if (obj[key] === null) {
+            delete obj[key];
+        } else if (typeof obj[key] === "object" && obj[key] !== null && !Array.isArray(obj[key])) {
+            stripNulls(obj[key] as Record<string, unknown>);
+        }
+    }
+}
+
+/**
+ * Deep merge with array-replace semantics and null-deletion.
+ * - Arrays: source replaces target entirely (no index merge)
+ * - null: key removed from output
+ * - Objects: deep merged (unchanged from lodash/merge)
+ */
+function configMerge(...sources: Record<string, unknown>[]): Record<string, unknown> {
+    const result = mergeWith({}, ...sources, (_objValue: unknown, srcValue: unknown) => {
+        if (Array.isArray(srcValue)) return srcValue;
+    });
+    stripNulls(result);
+    return result;
+}
+
+/**
  * Safely read and parse a JSON file, returning {} on failure
  */
 function readJsonSafe(filePath: string): Record<string, unknown> {
@@ -83,7 +110,7 @@ function buildBaseConfig(schema?: TsconfigConfig): Record<string, unknown> {
 
     // Apply schema.tsconfig.base overrides
     if (schema?.base) {
-        return merge({}, base, schema.base);
+        return configMerge(base, schema.base);
     }
     return base;
 }
@@ -97,14 +124,14 @@ function buildWebConfig(
     schema?: TsconfigConfig,
 ): Record<string, unknown> {
     let config = buildBaseConfig(schema);
-    config = merge({}, config, { compilerOptions: { ...WEB_COMPILER_OPTIONS } });
+    config = configMerge(config, { compilerOptions: { ...WEB_COMPILER_OPTIONS } });
     if (schema?.web) {
-        config = merge({}, config, schema.web);
+        config = configMerge(config, schema.web);
     }
     if (existsSync(localStubPath)) {
         const local = readJsonSafe(localStubPath);
         const { extends: _, ...rest } = local;
-        config = merge({}, config, rest);
+        config = configMerge(config, rest);
     }
     delete config.extends;
     return config;
@@ -119,14 +146,14 @@ function buildNodeConfig(
     schema?: TsconfigConfig,
 ): Record<string, unknown> {
     let config = buildBaseConfig(schema);
-    config = merge({}, config, { compilerOptions: { ...NODE_COMPILER_OPTIONS } });
+    config = configMerge(config, { compilerOptions: { ...NODE_COMPILER_OPTIONS } });
     if (schema?.node) {
-        config = merge({}, config, schema.node);
+        config = configMerge(config, schema.node);
     }
     if (existsSync(localStubPath)) {
         const local = readJsonSafe(localStubPath);
         const { extends: _, ...rest } = local;
-        config = merge({}, config, rest);
+        config = configMerge(config, rest);
     }
     delete config.extends;
     return config;
@@ -144,12 +171,12 @@ function buildBuilderConfig(
         compilerOptions: { ...BUILDER_COMPILER_OPTIONS },
     };
     if (schema?.builder) {
-        config = merge({}, config, schema.builder);
+        config = configMerge(config, schema.builder);
     }
     if (existsSync(localStubPath)) {
         const local = readJsonSafe(localStubPath);
         const { extends: _, ...rest } = local;
-        config = merge({}, config, rest);
+        config = configMerge(config, rest);
     }
     delete config.extends;
     delete (config as Record<string, unknown>).references;
@@ -167,9 +194,8 @@ function buildTypecheckConfig(schema?: TsconfigConfig): Record<string, unknown> 
         compilerOptions: { ...TYPECHECK_COMPILER_OPTIONS },
     };
     if (schema?.typecheck?.compilerOptions) {
-        config.compilerOptions = merge(
-            {},
-            config.compilerOptions,
+        config.compilerOptions = configMerge(
+            config.compilerOptions as Record<string, unknown>,
             schema.typecheck.compilerOptions,
         );
     }

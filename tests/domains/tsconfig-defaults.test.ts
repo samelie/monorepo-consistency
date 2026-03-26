@@ -13,8 +13,11 @@ import {
     TYPECHECK_COMPILER_OPTIONS,
     WEB_COMPILER_OPTIONS,
 } from "@adddog/monorepo-consistency";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("tsconfig internal defaults", () => {
     describe("buildBaseConfig", () => {
@@ -38,7 +41,7 @@ describe("tsconfig internal defaults", () => {
             expect(co.strict).toBe(false);
             // Superbase values still present
             expect(co.resolveJsonModule).toBe(true);
-            // Include merged (lodash merge replaces arrays by index)
+            // Include replaced (array-replace semantics)
             expect(config.include).toEqual(["lib"]);
         });
     });
@@ -47,9 +50,8 @@ describe("tsconfig internal defaults", () => {
         it("should produce web config with merged WEB compilerOptions", () => {
             const config = buildWebConfig("/nonexistent/web.tsconfig.json");
             const co = config.compilerOptions as Record<string, unknown>;
-            // WEB overrides lib by index — shorter array leaves trailing superbase entries
-            const lib = co.lib as string[];
-            expect(lib.slice(0, 4)).toEqual([...WEB_COMPILER_OPTIONS.lib]);
+            // WEB lib fully replaces superbase lib (array-replace semantics)
+            expect(co.lib).toEqual([...WEB_COMPILER_OPTIONS.lib]);
             expect(co.types).toEqual([...WEB_COMPILER_OPTIONS.types]);
             // Still has superbase options
             expect(co.strict).toBe(true);
@@ -73,9 +75,8 @@ describe("tsconfig internal defaults", () => {
             const config = buildNodeConfig("/nonexistent/node.tsconfig.json");
             const co = config.compilerOptions as Record<string, unknown>;
             expect(co.types).toEqual([...NODE_COMPILER_OPTIONS.types]);
-            // NODE lib ["ESNext"] is shorter than superbase lib — trailing entries remain
-            const lib = co.lib as string[];
-            expect(lib[0]).toBe("ESNext");
+            // NODE lib fully replaces superbase lib (array-replace semantics)
+            expect(co.lib).toEqual([...NODE_COMPILER_OPTIONS.lib]);
             expect(co.strict).toBe(true);
         });
 
@@ -144,10 +145,9 @@ describe("tsconfig internal defaults", () => {
             expect(co.moduleResolution).toBe("bundler");
             expect(co.erasableSyntaxOnly).toBe(true);
 
-            // Web-specific overrides (lodash merge by index — trailing superbase lib entries remain)
+            // Web-specific overrides (array-replace semantics)
             expect(co.types).toEqual(["vite/client", "vitest/globals"]);
-            const lib = co.lib as string[];
-            expect(lib.slice(0, 4)).toEqual(["ES2022", "DOM", "DOM.Iterable", "WebWorker"]);
+            expect(co.lib).toEqual(["ES2022", "DOM", "DOM.Iterable", "WebWorker"]);
 
             // Base include/exclude
             expect(config.include).toEqual(["src"]);
@@ -159,9 +159,8 @@ describe("tsconfig internal defaults", () => {
             const co = config.compilerOptions as Record<string, unknown>;
 
             expect(co.types).toEqual(["node"]);
-            // lodash merge by index — ["ESNext"] overwrites first element, rest from superbase remain
-            const lib = co.lib as string[];
-            expect(lib[0]).toBe("ESNext");
+            // NODE lib fully replaces superbase lib (array-replace semantics)
+            expect(co.lib).toEqual(["ESNext"]);
             expect(co.moduleDetection).toBe("force");
             expect(co.module).toBe("ESNext");
             expect(co.moduleResolution).toBe("bundler");
@@ -182,6 +181,55 @@ describe("tsconfig internal defaults", () => {
                 moduleResolution: "bundler",
                 allowSyntheticDefaultImports: true,
             });
+        });
+    });
+
+    describe("array-replace and null-deletion semantics", () => {
+        let tmpDir: string;
+
+        beforeAll(() => {
+            tmpDir = mkdtempSync(join(tmpdir(), "tsconfig-test-"));
+        });
+
+        afterAll(() => {
+            rmSync(tmpDir, { recursive: true, force: true });
+        });
+
+        it("empty array in local stub clears default include", () => {
+            const stubPath = join(tmpDir, "node-empty-include.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({ include: [] }));
+            const config = buildNodeConfig(stubPath);
+            expect(config.include).toEqual([]);
+        });
+
+        it("non-empty array in local stub replaces default include", () => {
+            const stubPath = join(tmpDir, "node-custom-include.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({ include: ["lib", "scripts"] }));
+            const config = buildNodeConfig(stubPath);
+            expect(config.include).toEqual(["lib", "scripts"]);
+        });
+
+        it("null in local stub removes key from output", () => {
+            const stubPath = join(tmpDir, "node-null-watch.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({ watchOptions: null }));
+            const config = buildNodeConfig(stubPath);
+            expect(config.watchOptions).toBeUndefined();
+        });
+
+        it("null in schema overrides removes key from output", () => {
+            const config = buildBaseConfig({
+                base: { watchOptions: null },
+            } as never);
+            expect(config.watchOptions).toBeUndefined();
+            // Other keys still present
+            expect(config.include).toEqual([...BASE_INCLUDE]);
+        });
+
+        it("empty array in web local stub clears default include", () => {
+            const stubPath = join(tmpDir, "web-empty-include.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({ include: [] }));
+            const config = buildWebConfig(stubPath);
+            expect(config.include).toEqual([]);
         });
     });
 });
