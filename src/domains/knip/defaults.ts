@@ -21,7 +21,11 @@ export const defaultKnipConfig: KnipConfig = {
 
     paths: {},
 
-    ignore: [],
+    ignore: [
+        "**/dist/**",
+        "**/vite-env.d.ts",
+        "**/eslint.config.mjs",
+    ],
 
     ignoreBinaries: [],
 

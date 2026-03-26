@@ -19,8 +19,11 @@ describe("knip defaults", () => {
             expect(defaultKnipConfig.project).toEqual([]);
         });
 
-        it("should have empty ignore array (patterns added per-package)", () => {
-            expect(defaultKnipConfig.ignore).toEqual([]);
+        it("should have universal ignore patterns", () => {
+            const ignore = defaultKnipConfig.ignore as string[];
+            expect(ignore).toContain("**/dist/**");
+            expect(ignore).toContain("**/vite-env.d.ts");
+            expect(ignore).toContain("**/eslint.config.mjs");
         });
 
         it("should not ignore tailwind.config.ts (let tailwind plugin handle it)", () => {
