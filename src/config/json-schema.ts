@@ -146,7 +146,6 @@ export function createConfigTemplate(): object {
                             npm: ">= 11",
                         },
                     },
-                    { field: "private", default: true },
                 ],
                 forbidden: ["postinstall"],
             },
