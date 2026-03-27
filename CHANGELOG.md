@@ -1,5 +1,11 @@
 # @adddog/monorepo-consistency
 
+## 0.1.1
+
+### Patch Changes
+
+- 0a4ac24: Remove "private" from required package.json fields (allows packages to opt out for npm publishing).
+
 ## 0.1.0
 
 ### Minor Changes
