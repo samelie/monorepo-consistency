@@ -23,7 +23,7 @@
     "dev": "tsx src/cli.ts",
     "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
-    "prepack": "pnpm run prepublishOnly",
+    "prepack": "pnpm run build",
     "build:watch": "tsup --watch",
     "test": "vitest --watch=false",
     "knip": "knip",
