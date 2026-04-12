@@ -45,15 +45,15 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.17.24",
-    "@types/node": "^25.5.2",
-    "@vitest/coverage-v8": "^4.1.2",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "bumpp": "^11.0.1",
     "eslint": "^10.2.0",
-    "knip": "^6.3.0",
+    "knip": "^6.3.1",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   },
   "bundledDeps": true,
   "peerDependencies": {
