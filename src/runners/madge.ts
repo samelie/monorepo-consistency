@@ -13,21 +13,39 @@ interface MadgeResult {
     circular: string[][];
 }
 
+// Local type declarations since @types/madge uses export= pattern
+interface MadgeInstance {
+    circular: () => string[][];
+}
+
+interface MadgeConfig {
+    fileExtensions?: string[];
+    tsConfig?: string | object;
+    excludeRegExp?: RegExp[];
+}
+
+type MadgeFn = (path: string | string[] | object, config?: MadgeConfig) => Promise<MadgeInstance>;
+
 /**
  * Run madge programmatic API against a package's source directory.
  * Uses dynamic import so the tool degrades gracefully if madge isn't installed.
  */
 export async function runMadge(packagePath: string, options: MadgeOptions = {}): Promise<MadgeResult> {
-    let madge: typeof import("madge");
+    let madgeFn: MadgeFn;
     try {
-        madge = await import("madge");
+        // ESM/CJS interop: dynamic import of CJS module wraps export= as { default: fn }
+        const madgeModule = await import("madge");
+        // Handle both ESM wrapper ({ default: fn }) and direct CJS (fn)
+        const maybeFn = "default" in madgeModule ? madgeModule.default : madgeModule;
+        if (typeof maybeFn !== "function") {
+            throw new TypeError("madge module does not export a function");
+        }
+        madgeFn = maybeFn as MadgeFn;
     } catch {
         throw new Error(
             "madge is not installed. Run: pnpm add -D madge",
         );
     }
-
-    const madgeFn = madge.default;
 
     const result = await madgeFn(`${packagePath}/src`, {
         fileExtensions: options.fileExtensions ?? ["ts", "tsx", "js", "jsx"],

@@ -45,6 +45,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.17.24",
+    "@types/madge": "^5.0.3",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.4",
     "bumpp": "^11.0.1",
