@@ -13,9 +13,6 @@
 
 // superbase.tsconfig.json
 export const SUPERBASE_COMPILER_OPTIONS = {
-    // tsup internally sets baseUrl in its temp tsconfig for DTS generation,
-    // which TS6 treats as a deprecated option error
-    ignoreDeprecations: "6.0",
     resolveJsonModule: true,
     strictNullChecks: true,
     esModuleInterop: true,

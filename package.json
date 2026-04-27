@@ -19,7 +19,7 @@
     "build": "tsup",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "types": "tsc -p tsconfig.typecheck.json",
+    "types": "tsgo -p tsconfig.typecheck.json",
     "dev": "tsx src/cli.ts",
     "release": "bumpp --yes --no-push --no-tag --release patch",
     "generate-schema": "tsx scripts/generate-schema.ts",
@@ -38,7 +38,7 @@
     "lodash": "^4.18.1",
     "madge": "^8.0.0",
     "minimatch": "^10.2.5",
-    "ora": "^9.3.0",
+    "ora": "^9.4.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6",
     "zx": "^8.8.5"
@@ -47,14 +47,14 @@
     "@types/lodash": "^4.17.24",
     "@types/madge": "^5.0.3",
     "@types/node": "^25.6.0",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@typescript/native-preview": "beta",
+    "@vitest/coverage-v8": "^4.1.5",
     "bumpp": "^11.0.1",
     "eslint": "^10.2.1",
-    "knip": "^6.5.0",
+    "knip": "^6.7.0",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   },
   "bundledDeps": true,
   "peerDependencies": {
