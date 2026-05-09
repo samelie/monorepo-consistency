@@ -40,18 +40,18 @@
     "minimatch": "^10.2.5",
     "ora": "^9.4.0",
     "yaml": "^2.8.4",
-    "zod": "^4.4.2",
+    "zod": "^4.4.3",
     "zx": "^8.8.5"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.24",
     "@types/madge": "^5.0.3",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "@typescript/native-preview": "beta",
     "@vitest/coverage-v8": "^4.1.5",
-    "bumpp": "^11.0.1",
+    "bumpp": "^11.1.0",
     "eslint": "^10.3.0",
-    "knip": "^6.11.0",
+    "knip": "^6.12.1",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "vitest": "^4.1.5"
