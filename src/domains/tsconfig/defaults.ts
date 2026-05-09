@@ -13,6 +13,7 @@
 
 // superbase.tsconfig.json
 export const SUPERBASE_COMPILER_OPTIONS = {
+    ignoreDeprecations: "6.0",
     resolveJsonModule: true,
     strictNullChecks: true,
     esModuleInterop: true,
