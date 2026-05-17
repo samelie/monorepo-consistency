@@ -112,12 +112,12 @@ const packageJsonConfigSchema = z.object({
     // Script management
     scripts: z.object({
         enforce: z.boolean().default(false).describe("Enforce script presence across packages"),
-        required: z.record(z.string(), z.string())
+        required: z.record(z.string(), z.union([z.string(), z.array(z.string())]))
             .default({})
-            .describe("Scripts that must exist in all packages (name -> command)"),
-        recommended: z.record(z.string(), z.string())
+            .describe("Scripts that must exist in all packages (name -> command or array of acceptable commands, first is preferred)"),
+        recommended: z.record(z.string(), z.union([z.string(), z.array(z.string())]))
             .default({})
-            .describe("Scripts that should exist (warns if missing)"),
+            .describe("Scripts that should exist (warns if missing, string or array of acceptable commands)"),
         forbidden: z.array(z.string())
             .default([])
             .describe("Script names that should not exist"),

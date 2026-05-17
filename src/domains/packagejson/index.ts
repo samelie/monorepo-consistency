@@ -53,7 +53,10 @@ const checkScripts = async (options: PackageJsonCheckOptions): Promise<Issue[]> 
         const scripts = pkg.scripts || {};
 
         // Check required scripts
-        for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.required || {})) {
+        for (const [scriptName, scriptCommandOrArray] of Object.entries(scriptConfig.required || {})) {
+            const acceptableCommands = Array.isArray(scriptCommandOrArray) ? scriptCommandOrArray : [scriptCommandOrArray];
+            const preferredCommand = acceptableCommands[0];
+
             if (!scripts[scriptName]) {
                 issues.push({
                     severity: "high",
@@ -61,22 +64,25 @@ const checkScripts = async (options: PackageJsonCheckOptions): Promise<Issue[]> 
                     package: pkg.name,
                     file: `${pkg.path}/package.json`,
                     message: `Missing required script: "${scriptName}"`,
-                    fix: `Add: "scripts": { "${scriptName}": "${scriptCommand}" }`,
+                    fix: `Add: "scripts": { "${scriptName}": "${preferredCommand}" }`,
                 });
-            } else if (scripts[scriptName] !== scriptCommand) {
+            } else if (!acceptableCommands.includes(scripts[scriptName])) {
                 issues.push({
                     severity: "medium",
                     type: "script-mismatch",
                     package: pkg.name,
                     file: `${pkg.path}/package.json`,
-                    message: `Script "${scriptName}" differs from standard: "${scripts[scriptName]}" vs "${scriptCommand}"`,
-                    fix: `Update to: "${scriptCommand}"`,
+                    message: `Script "${scriptName}" differs from standard: "${scripts[scriptName]}" vs ${acceptableCommands.map(c => `"${c}"`).join(" | ")}`,
+                    fix: `Update to one of: ${acceptableCommands.map(c => `"${c}"`).join(", ")}`,
                 });
             }
         }
 
         // Check recommended scripts (warning level)
-        for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.recommended || {})) {
+        for (const [scriptName, scriptCommandOrArray] of Object.entries(scriptConfig.recommended || {})) {
+            const acceptableCommands = Array.isArray(scriptCommandOrArray) ? scriptCommandOrArray : [scriptCommandOrArray];
+            const preferredCommand = acceptableCommands[0];
+
             if (!scripts[scriptName]) {
                 issues.push({
                     severity: "low",
@@ -84,7 +90,7 @@ const checkScripts = async (options: PackageJsonCheckOptions): Promise<Issue[]> 
                     package: pkg.name,
                     file: `${pkg.path}/package.json`,
                     message: `Missing recommended script: "${scriptName}"`,
-                    fix: `Consider adding: "scripts": { "${scriptName}": "${scriptCommand}" }`,
+                    fix: `Consider adding: "scripts": { "${scriptName}": "${preferredCommand}" }`,
                 });
             }
         }
@@ -321,9 +327,10 @@ const fix = async (options: PackageJsonFixOptions): Promise<FixResult> => {
             if ((options.addScripts || options.all) && !isIgnoredForScripts && autoFixConfig.addMissingScripts && scriptConfig?.required) {
                 const scripts = (pkgJson.scripts || {}) as Record<string, string>;
 
-                for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.required)) {
+                for (const [scriptName, scriptCommandOrArray] of Object.entries(scriptConfig.required)) {
+                    const preferredCommand = Array.isArray(scriptCommandOrArray) ? scriptCommandOrArray[0]! : scriptCommandOrArray;
                     if (!scripts[scriptName]) {
-                        scripts[scriptName] = scriptCommand;
+                        scripts[scriptName] = preferredCommand;
                         modified = true;
 
                         changes.push({
@@ -331,7 +338,7 @@ const fix = async (options: PackageJsonFixOptions): Promise<FixResult> => {
                             package: pkg.name,
                             file: pkgJsonPath,
                             description: `Added required script: "${scriptName}"`,
-                            after: scriptCommand,
+                            after: preferredCommand,
                         });
                     }
                 }
@@ -343,9 +350,10 @@ const fix = async (options: PackageJsonFixOptions): Promise<FixResult> => {
             if ((options.addRecommendedScripts || options.all) && !isIgnoredForScripts && scriptConfig?.recommended) {
                 const scripts = (pkgJson.scripts || {}) as Record<string, string>;
 
-                for (const [scriptName, scriptCommand] of Object.entries(scriptConfig.recommended)) {
+                for (const [scriptName, scriptCommandOrArray] of Object.entries(scriptConfig.recommended)) {
+                    const preferredCommand = Array.isArray(scriptCommandOrArray) ? scriptCommandOrArray[0]! : scriptCommandOrArray;
                     if (!scripts[scriptName]) {
-                        scripts[scriptName] = scriptCommand;
+                        scripts[scriptName] = preferredCommand;
                         modified = true;
 
                         changes.push({
@@ -353,7 +361,7 @@ const fix = async (options: PackageJsonFixOptions): Promise<FixResult> => {
                             package: pkg.name,
                             file: pkgJsonPath,
                             description: `Added recommended script: "${scriptName}"`,
-                            after: scriptCommand,
+                            after: preferredCommand,
                         });
                     }
                 }
