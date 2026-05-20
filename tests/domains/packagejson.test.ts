@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // eslint-disable-next-line rad/no-incorrect-pkg-imports
 import { ConfigManager, packageJsonHandler } from "../../src/index.js";
 import {
+    arrayScriptEnforcementConfig,
     consistencyConfig,
     fieldEnforcementConfig,
     scriptEnforcementConfig,
@@ -187,6 +188,150 @@ describe("packageJson domain", () => {
                 ),
             );
             expect(scriptIssues).toHaveLength(0);
+        });
+    });
+
+    describe("check - array-format scripts", () => {
+        it("should accept any alternative from array", async () => {
+            workspace = await createTempWorkspace({
+                config: arrayScriptEnforcementConfig,
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                        scripts: {
+                            types: "vue-tsc -p tsconfig.typecheck.json",
+                            lint: "eslint .",
+                        },
+                    },
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await packageJsonHandler.check({
+                scripts: true,
+                cwd: workspace.root,
+            });
+
+            const mismatch = result.issues.find(
+                i => i.type === "script-mismatch" && i.message.includes("types"),
+            );
+            expect(mismatch).toBeUndefined();
+        });
+
+        it("should detect mismatch when script matches none in array", async () => {
+            workspace = await createTempWorkspace({
+                config: arrayScriptEnforcementConfig,
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                        scripts: {
+                            types: "tsc --noEmit",
+                            lint: "eslint .",
+                        },
+                    },
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await packageJsonHandler.check({
+                scripts: true,
+                cwd: workspace.root,
+            });
+
+            const mismatch = result.issues.find(
+                i => i.type === "script-mismatch" && i.message.includes("types"),
+            );
+            expect(mismatch).toBeDefined();
+            expect(mismatch?.message).toContain("tsgo -p tsconfig.typecheck.json");
+            expect(mismatch?.message).toContain("vue-tsc -p tsconfig.typecheck.json");
+        });
+
+        it("should detect missing script with array config", async () => {
+            workspace = await createTempWorkspace({
+                config: arrayScriptEnforcementConfig,
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                        scripts: {
+                            lint: "eslint .",
+                        },
+                    },
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await packageJsonHandler.check({
+                scripts: true,
+                cwd: workspace.root,
+            });
+
+            const missingTypes = result.issues.find(
+                i => i.type === "missing-script" && i.message.includes("types"),
+            );
+            expect(missingTypes).toBeDefined();
+            expect(missingTypes?.fix).toContain("tsgo -p tsconfig.typecheck.json");
+        });
+
+        it("should use first array element as preferred when auto-fixing", async () => {
+            workspace = await createTempWorkspace({
+                config: arrayScriptEnforcementConfig,
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                        scripts: {
+                            lint: "eslint .",
+                        },
+                    },
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            await packageJsonHandler.fix({
+                addScripts: true,
+                cwd: workspace.root,
+            });
+
+            const pkgJson = await workspace.readJSON<{ scripts: Record<string, string> }>(
+                "packages/pkg-a/package.json",
+            );
+            expect(pkgJson.scripts.types).toBe("tsgo -p tsconfig.typecheck.json");
+        });
+
+        it("should accept any alternative from recommended array", async () => {
+            workspace = await createTempWorkspace({
+                config: arrayScriptEnforcementConfig,
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                        scripts: {
+                            types: "tsgo -p tsconfig.typecheck.json",
+                            lint: "eslint .",
+                            build: "tsup",
+                        },
+                    },
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await packageJsonHandler.check({
+                scripts: true,
+                cwd: workspace.root,
+            });
+
+            const missingRecommended = result.issues.find(
+                i => i.type === "missing-recommended-script" && i.message.includes("build"),
+            );
+            expect(missingRecommended).toBeUndefined();
         });
     });
 

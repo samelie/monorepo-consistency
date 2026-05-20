@@ -62,6 +62,28 @@ export const consistencyConfig: Partial<MonorepoConfig> = {
     },
 };
 
+export const arrayScriptEnforcementConfig: Partial<MonorepoConfig> = {
+    version: "1.0.0",
+    packageJson: {
+        scripts: {
+            enforce: true,
+            required: {
+                types: ["tsgo -p tsconfig.typecheck.json", "vue-tsc -p tsconfig.typecheck.json"],
+                lint: "eslint .",
+            },
+            recommended: {
+                build: ["unbuild", "tsup"],
+            },
+            forbidden: ["prepublish"],
+            ignorePackages: ["@internal/*"],
+        },
+        autoFix: {
+            addMissingScripts: true,
+            removeInvalidFields: true,
+        },
+    },
+};
+
 export const fullConfig: Partial<MonorepoConfig> = {
     version: "1.0.0",
     packageJson: {
