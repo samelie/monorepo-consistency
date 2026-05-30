@@ -27,7 +27,7 @@ export const defaultKnipConfig: KnipConfig = {
         "**/eslint.config.mjs",
     ],
 
-    ignoreBinaries: [],
+    ignoreBinaries: ["tsgo"],
 
     ignoreDependencies: [],
 
