@@ -285,18 +285,31 @@ const check = async (options: TsconfigCheckOptions): Promise<CheckResult> => {
             }
 
             // Check for typecheck config
-            if (generateTypecheck && hasMainConfig) {
-                const typecheckPath = join(fullDir, "tsconfig.typecheck.json");
-                if (!existsSync(typecheckPath)) {
-                    issues.push({
-                        severity: "low",
-                        type: "missing-typecheck-config",
-                        package: dir,
-                        file: `${dir}/tsconfig.typecheck.json`,
-                        message: "Missing typecheck configuration",
-                        fix: "Run: mono tsconfig generate",
-                    });
-                }
+            const typecheckPath = join(fullDir, "tsconfig.typecheck.json");
+            const hasTypecheckConfig = existsSync(typecheckPath);
+
+            if (generateTypecheck && hasMainConfig && !hasTypecheckConfig) {
+                issues.push({
+                    severity: "low",
+                    type: "missing-typecheck-config",
+                    package: dir,
+                    file: `${dir}/tsconfig.typecheck.json`,
+                    message: "Missing typecheck configuration",
+                    fix: "Run: mono tsconfig generate",
+                });
+            }
+
+            // Orphaned typecheck config: tsconfig.typecheck.json exists but the
+            // base tsconfig.json it extends is missing (standalone leftover).
+            if (hasTypecheckConfig && !hasMainConfig) {
+                issues.push({
+                    severity: "low",
+                    type: "orphaned-typecheck",
+                    package: dir,
+                    file: `${dir}/tsconfig.typecheck.json`,
+                    message: "Package has tsconfig.typecheck.json but no tsconfig.json",
+                    fix: "Run: mono tsconfig generate (or delete the orphaned tsconfig.typecheck.json)",
+                });
             }
 
             // Validate extends chain if main config exists

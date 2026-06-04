@@ -362,6 +362,94 @@ describe("tsconfig domain", () => {
             expect(missingTypecheck).toBeUndefined();
         });
 
+        it("should report orphaned typecheck config without tsconfig.json", async () => {
+            workspace = await createTempWorkspace({
+                config: {
+                    version: "1.0.0",
+                    tsconfig: {
+                        generateTypecheck: true,
+                        excludePatterns: [
+                            "**/node_modules/**",
+                            "**/dist/**",
+                        ],
+                    },
+                },
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                    },
+                },
+                files: {
+                    // tsconfig.typecheck.json present but no base tsconfig.json
+                    "packages/pkg-a/tsconfig.typecheck.json": JSON.stringify({
+                        extends: "./tsconfig.json",
+                        compilerOptions: { noEmit: true },
+                    }),
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await tsconfigHandler.check({
+                cwd: workspace.root,
+            });
+
+            const orphaned = result.issues.find(
+                i => i.type === "orphaned-typecheck",
+            );
+            expect(orphaned).toBeDefined();
+            expect(orphaned?.severity).toBe("low");
+            expect(orphaned?.fix).toContain("mono tsconfig generate");
+
+            // Should NOT also report missing-typecheck-config (no base config)
+            const missingTypecheck = result.issues.find(
+                i => i.type === "missing-typecheck-config",
+            );
+            expect(missingTypecheck).toBeUndefined();
+        });
+
+        it("should not report orphaned typecheck when tsconfig.json exists", async () => {
+            workspace = await createTempWorkspace({
+                config: {
+                    version: "1.0.0",
+                    tsconfig: {
+                        generateTypecheck: true,
+                        excludePatterns: [
+                            "**/node_modules/**",
+                            "**/dist/**",
+                        ],
+                    },
+                },
+                packages: {
+                    "pkg-a": {
+                        name: "pkg-a",
+                        version: "1.0.0",
+                    },
+                },
+                files: {
+                    "packages/pkg-a/tsconfig.json": JSON.stringify({
+                        compilerOptions: { strict: true },
+                    }),
+                    "packages/pkg-a/tsconfig.typecheck.json": JSON.stringify({
+                        extends: "./tsconfig.json",
+                        compilerOptions: { noEmit: true },
+                    }),
+                },
+            });
+
+            await configManager.init({ cwd: workspace.root });
+
+            const result = await tsconfigHandler.check({
+                cwd: workspace.root,
+            });
+
+            const orphaned = result.issues.find(
+                i => i.type === "orphaned-typecheck",
+            );
+            expect(orphaned).toBeUndefined();
+        });
+
         it("should detect broken extends chain in packages", async () => {
             workspace = await createTempWorkspace({
                 config: {

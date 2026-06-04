@@ -79,7 +79,7 @@ src/
 ### Required Files (`files` config section)
 - Every package must have one of `eslint.config.mjs`/`eslint.config.ts` (must contain `@adddog/eslint`) and one of `web.tsconfig.json`/`node.tsconfig.json`/`builder.tsconfig.json` — at same level as package.json
 - `mono config check` flags `missing-*`/`invalid-*`; `mono config fix --add-missing` creates missing files
-- Created eslint config: `import config from "@adddog/eslint"; export default config()`. Created marker: `{}` (web vs node picked by dep heuristic — vue/react/vite → web)
+- Created eslint config: `import config from "@adddog/eslint"; export default config();`. Created marker: `{}` (web vs node picked by dep heuristic — vue/react/vite → web)
 - Rules configurable via `files.rules` in config (anyOf, createAs, defaultContent, mustContain, severity, ignorePackages)
 
 ### Programmatic API

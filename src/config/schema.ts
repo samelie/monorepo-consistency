@@ -181,7 +181,7 @@ const requiredFileRuleSchema = z.object({
  */
 export const DEFAULT_ESLINT_CONFIG_CONTENT = `import config from "@adddog/eslint";
 
-export default config()
+export default config();
 `;
 
 /**

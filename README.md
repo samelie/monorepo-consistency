@@ -637,7 +637,7 @@ Created `eslint.config.mjs` content:
 ```js
 import config from "@adddog/eslint";
 
-export default config()
+export default config();
 ```
 
 **Customizing rules** in your config file:
@@ -650,7 +650,7 @@ export default config()
                 "name": "eslint-config",
                 "anyOf": ["eslint.config.mjs", "eslint.config.ts"],
                 "createAs": "eslint.config.mjs",
-                "defaultContent": "import config from \"@adddog/eslint\";\n\nexport default config()\n",
+                "defaultContent": "import config from \"@adddog/eslint\";\n\nexport default config();\n",
                 "mustContain": "@adddog/eslint",
                 "severity": "medium",
                 "ignorePackages": ["@adddog/eslint"]

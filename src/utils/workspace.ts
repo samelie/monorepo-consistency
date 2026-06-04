@@ -1,10 +1,26 @@
 import type { PackageInfo, WorkspaceInfo } from "../types/index";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import process from "node:process";
 import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
+
+/**
+ * Path segments that mark build artifacts / dependency trees — package.json
+ * files nested under these are never real workspace members (e.g. a copied
+ * package.json under apps/scheduler/dist).
+ */
+const ARTIFACT_PATH_SEGMENTS = ["dist", "build", "node_modules"];
+
+/**
+ * True when an absolute package path lives under a build-artifact or
+ * dependency directory (dist/, build/, node_modules/).
+ */
+function isArtifactPath(packagePath: string): boolean {
+    const segments = packagePath.split(sep);
+    return segments.some(segment => ARTIFACT_PATH_SEGMENTS.includes(segment));
+}
 
 /**
  * Find the workspace root by looking for pnpm-workspace.yaml
@@ -50,9 +66,14 @@ async function getWorkspacePackagePaths(
         ignore: ["**/node_modules/**", "**/.*/**"],
     });
 
-    // Filter to only directories with package.json
+    // Filter to only directories with package.json, skipping any nested under
+    // build artifacts (dist/, build/) or dependency trees (node_modules/) — a
+    // stray package.json there (e.g. apps/scheduler/dist) is not a real member.
     const validPaths: string[] = [];
     for (const pkgPath of packagePaths) {
+        if (isArtifactPath(pkgPath)) {
+            continue;
+        }
         const packageJsonPath = join(pkgPath, "package.json");
         try {
             await readFile(packageJsonPath, "utf-8");

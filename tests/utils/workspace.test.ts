@@ -90,6 +90,39 @@ describe("workspace utilities", () => {
             expect(info.packages).toHaveLength(0);
         });
 
+        it("should ignore package.json under dist/build/node_modules artifacts", async () => {
+            // Glob deeply so stray package.json files under artifact dirs would
+            // otherwise be discovered (reproduces apps/scheduler/dist case).
+            workspace = await createTempWorkspace({
+                workspacePatterns: ["packages/**"],
+                packages: {
+                    "pkg-a": { name: "@test/pkg-a", version: "1.0.0" },
+                },
+            });
+
+            // Build-artifact package.json copies that must be filtered out.
+            await workspace.writeJSON("packages/pkg-a/dist/package.json", {
+                name: "@test/pkg-a-deploy",
+                version: "1.0.0",
+            });
+            await workspace.writeJSON("packages/pkg-a/build/package.json", {
+                name: "@test/pkg-a-build",
+                version: "1.0.0",
+            });
+            await workspace.writeJSON(
+                "packages/pkg-a/node_modules/some-dep/package.json",
+                { name: "some-dep", version: "1.0.0" },
+            );
+
+            const info = await getWorkspaceInfo(workspace.root);
+
+            const names = info.packages.map(p => p.name);
+            expect(names).toEqual(["@test/pkg-a"]);
+            expect(names).not.toContain("@test/pkg-a-deploy");
+            expect(names).not.toContain("@test/pkg-a-build");
+            expect(names).not.toContain("some-dep");
+        });
+
         it("should include lockfile and workspace file paths", async () => {
             workspace = await createTempWorkspace();
 
