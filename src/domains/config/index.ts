@@ -1,4 +1,10 @@
-import type { Change, CheckResult, CommandOptions, ConfigType, FixResult, Issue } from "../../types/index";
+import type { RequiredFileRule } from "../../config/schema";
+import type { Change, CheckResult, CommandOptions, ConfigType, FixResult, Issue, PackageInfo, WorkspaceInfo } from "../../types/index";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { minimatch } from "minimatch";
+import { ConfigManager } from "../../config/loader";
+import { DEFAULT_REQUIRED_FILE_RULES } from "../../config/schema";
 import * as logger from "../../utils/logger";
 import { getWorkspaceInfo } from "../../utils/workspace";
 
@@ -15,24 +21,147 @@ interface ConfigFixOptions extends CommandOptions {
     updateScripts?: boolean;
 }
 
-// Pure functions for configuration operations
+/**
+ * Dependency names signalling a web (browser) package — used to pick
+ * web.tsconfig.json vs node.tsconfig.json when creating a missing marker.
+ */
+const WEB_DEP_SIGNALS = [
+    /^vue$/,
+    /^react(?:-dom)?$/,
+    /^svelte$/,
+    /^solid-js$/,
+    /^vite$/,
+    /^@vitejs\//,
+    /^vue-router$/,
+    /^pinia$/,
+    /^three$/,
+];
 
-const checkTypeScriptConfigs = async (_workspacePath: string): Promise<Issue[]> => {
-    logger.debug("Checking TypeScript configurations...");
-    // TODO: Check for tsconfig.json consistency
-    // - Ensure all packages have tsconfig.json
-    // - Validate extends chains
-    // - Check compiler options consistency
-    return [];
-};
+/**
+ * Resolve required-file rules from schema config (defaults when no config loaded)
+ */
+function resolveFilesConfig(): { enabled: boolean; rules: RequiredFileRule[] } {
+    try {
+        const config = ConfigManager.getInstance().getConfig();
+        return {
+            enabled: config?.files?.enabled ?? true,
+            rules: config?.files?.rules ?? DEFAULT_REQUIRED_FILE_RULES,
+        };
+    } catch {
+        return { enabled: true, rules: DEFAULT_REQUIRED_FILE_RULES };
+    }
+}
 
-const checkEslintConfigs = async (_workspacePath: string): Promise<Issue[]> => {
-    logger.debug("Checking ESLint configurations...");
-    // TODO: Check for ESLint config consistency
-    // - Ensure all packages have ESLint config
-    // - Validate extends chains
-    return [];
-};
+/**
+ * A rule covering both web and node tsconfig markers — creating one hands
+ * tsconfig.json ownership to the generator
+ */
+function isMarkerPairRule(rule: RequiredFileRule): boolean {
+    return rule.anyOf.includes("web.tsconfig.json") && rule.anyOf.includes("node.tsconfig.json");
+}
+
+/**
+ * Check a single required-file rule against a package
+ */
+function checkRule(pkg: PackageInfo, workspaceRoot: string, rule: RequiredFileRule): Issue | undefined {
+    if (rule.ignorePackages.some(pattern => minimatch(pkg.name, pattern))) {
+        return undefined;
+    }
+
+    const dir = relative(workspaceRoot, pkg.path);
+    const existing = rule.anyOf.find(file => existsSync(join(pkg.path, file)));
+
+    if (!existing) {
+        // Handwritten tsconfig.json without a marker: needs deliberate migration,
+        // since generating from a fresh marker would overwrite it
+        if (isMarkerPairRule(rule) && existsSync(join(pkg.path, "tsconfig.json"))) {
+            return {
+                severity: rule.severity,
+                type: `unmanaged-${rule.name}`,
+                package: pkg.name,
+                file: join(dir, "tsconfig.json"),
+                message: "Package has handwritten tsconfig.json without a marker file",
+                fix: "Migrate: create a web/node.tsconfig.json marker with any package-specific overrides, then run mono tsconfig generate",
+            };
+        }
+
+        return {
+            severity: rule.severity,
+            type: `missing-${rule.name}`,
+            package: pkg.name,
+            file: dir,
+            message: `Missing required file (one of: ${rule.anyOf.join(", ")})`,
+            fix: "Run: mono config fix --add-missing",
+        };
+    }
+
+    if (rule.mustContain) {
+        const content = readFileSync(join(pkg.path, existing), "utf-8");
+        if (!content.includes(rule.mustContain)) {
+            return {
+                severity: rule.severity,
+                type: `invalid-${rule.name}`,
+                package: pkg.name,
+                file: join(dir, existing),
+                message: `${existing} must contain "${rule.mustContain}"`,
+            };
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Filter rules by CLI flags (--eslint / --tsconfig / --all)
+ */
+function selectRules(rules: RequiredFileRule[], options: ConfigCheckOptions): RequiredFileRule[] {
+    if (options.all || (!options.eslint && !options.tsconfig)) {
+        return rules;
+    }
+    return rules.filter(rule =>
+        (options.eslint && rule.name.includes("eslint"))
+        || (options.tsconfig && rule.name.includes("tsconfig")),
+    );
+}
+
+/**
+ * Run all required-file rules across workspace packages
+ */
+function checkRequiredFiles(workspace: WorkspaceInfo, options: ConfigCheckOptions): Issue[] {
+    const { enabled, rules } = resolveFilesConfig();
+    if (!enabled) {
+        return [];
+    }
+
+    const issues: Issue[] = [];
+    for (const pkg of workspace.packages) {
+        for (const rule of selectRules(rules, options)) {
+            const issue = checkRule(pkg, workspace.root, rule);
+            if (issue) {
+                issues.push(issue);
+            }
+        }
+    }
+    return issues;
+}
+
+/**
+ * Pick the filename to create for a package missing all of a rule's alternatives.
+ * web/node marker pairs without an explicit createAs use a dependency heuristic.
+ */
+function pickCreateTarget(rule: RequiredFileRule, pkg: PackageInfo): string | undefined {
+    if (rule.createAs) {
+        return rule.createAs;
+    }
+
+    if (rule.anyOf.includes("web.tsconfig.json") && rule.anyOf.includes("node.tsconfig.json")) {
+        const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+        const isWeb = deps.some(dep => WEB_DEP_SIGNALS.some(signal => signal.test(dep)));
+        return isWeb ? "web.tsconfig.json" : "node.tsconfig.json";
+    }
+
+    return rule.anyOf[0];
+}
 
 const checkPackageJsonFiles = async (_workspacePath: string): Promise<Issue[]> => {
     logger.debug("Checking package.json files...");
@@ -49,22 +178,11 @@ const check = async (options: ConfigCheckOptions): Promise<CheckResult> => {
 
     try {
         const workspace = await getWorkspaceInfo(options.cwd);
-        const issuePromises: Promise<Issue[]>[] = [];
-
-        if (options.tsconfig || options.all) {
-            issuePromises.push(checkTypeScriptConfigs(workspace.root));
-        }
-
-        if (options.eslint || options.all) {
-            issuePromises.push(checkEslintConfigs(workspace.root));
-        }
+        const issues: Issue[] = checkRequiredFiles(workspace, options);
 
         if (options.packageJson || options.all) {
-            issuePromises.push(checkPackageJsonFiles(workspace.root));
+            issues.push(...await checkPackageJsonFiles(workspace.root));
         }
-
-        const issueArrays = await Promise.all(issuePromises);
-        const issues = issueArrays.flat();
 
         spinner.succeed("Configuration check complete");
 
@@ -91,10 +209,52 @@ const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
 
     try {
         const changes: Change[] = [];
+        let failed = 0;
 
         if (options.addMissing) {
             logger.debug("Adding missing configurations...");
-            // TODO: Add missing tsconfig.json, eslint configs, etc.
+            const workspace = await getWorkspaceInfo(options.cwd);
+            const { enabled, rules } = resolveFilesConfig();
+
+            if (enabled) {
+                for (const pkg of workspace.packages) {
+                    for (const rule of rules) {
+                        if (rule.ignorePackages.some(pattern => minimatch(pkg.name, pattern))) {
+                            continue;
+                        }
+                        if (rule.anyOf.some(file => existsSync(join(pkg.path, file)))) {
+                            continue;
+                        }
+                        // Never auto-create a marker over a handwritten tsconfig.json —
+                        // the next `mono tsconfig generate` would overwrite it
+                        if (isMarkerPairRule(rule) && existsSync(join(pkg.path, "tsconfig.json"))) {
+                            logger.debug(`Skipping ${rule.name} for ${pkg.name}: handwritten tsconfig.json present`);
+                            continue;
+                        }
+
+                        const target = pickCreateTarget(rule, pkg);
+                        if (!target) {
+                            continue;
+                        }
+
+                        const filePath = join(pkg.path, target);
+                        try {
+                            if (!options.dryRun) {
+                                writeFileSync(filePath, rule.defaultContent, "utf-8");
+                            }
+                            changes.push({
+                                type: `create-${rule.name}`,
+                                package: pkg.name,
+                                file: relative(workspace.root, filePath),
+                                description: `Created ${target} for ${pkg.name}`,
+                            });
+                        } catch (error) {
+                            failed++;
+                            logger.debug(`Failed to create ${filePath}: ${error}`);
+                        }
+                    }
+                }
+            }
         }
 
         if (options.updateScripts) {
@@ -105,9 +265,9 @@ const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
         spinner.succeed("Configuration fixes complete");
 
         return {
-            success: true,
+            success: failed === 0,
             applied: changes.length,
-            failed: 0,
+            failed,
             changes,
         };
     } catch (error) {

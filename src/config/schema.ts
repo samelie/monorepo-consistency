@@ -164,6 +164,64 @@ const packageJsonConfigSchema = z.object({
 });
 
 /**
+ * A required-file rule: at least one of `anyOf` must exist next to package.json
+ */
+const requiredFileRuleSchema = z.object({
+    name: z.string().describe("Rule identifier (issue types become missing-<name> / invalid-<name>)"),
+    anyOf: z.array(z.string()).min(1).describe("File alternatives — at least one must exist at the package root (same level as package.json)"),
+    createAs: z.string().optional().describe("Filename created by `mono config fix --add-missing` (web/node marker pairs use a dependency heuristic when omitted)"),
+    defaultContent: z.string().describe("Content written when creating the file"),
+    mustContain: z.string().optional().describe("Substring an existing file must contain (content enforcement)"),
+    severity: z.enum(["low", "medium", "high", "critical"]).default("medium").describe("Issue severity"),
+    ignorePackages: z.array(z.string()).default([]).describe("Package name globs to skip"),
+});
+
+/**
+ * Default content for created eslint configs — the monorepo-standard shared config
+ */
+export const DEFAULT_ESLINT_CONFIG_CONTENT = `import config from "@adddog/eslint";
+
+export default config()
+`;
+
+/**
+ * Default content for created tsconfig marker files
+ */
+export const DEFAULT_TSCONFIG_MARKER_CONTENT = "{}\n";
+
+/**
+ * Default required-file rules: every package needs an eslint config importing
+ * the shared @adddog/eslint config, and a tsconfig type-signal marker file.
+ */
+export const DEFAULT_REQUIRED_FILE_RULES: RequiredFileRule[] = [
+    {
+        name: "eslint-config",
+        anyOf: ["eslint.config.mjs", "eslint.config.ts"],
+        createAs: "eslint.config.mjs",
+        defaultContent: DEFAULT_ESLINT_CONFIG_CONTENT,
+        mustContain: "@adddog/eslint",
+        severity: "medium",
+        // The shared config package imports its own dist, not itself
+        ignorePackages: ["@adddog/eslint"],
+    },
+    {
+        name: "tsconfig-marker",
+        anyOf: ["web.tsconfig.json", "node.tsconfig.json", "builder.tsconfig.json"],
+        defaultContent: DEFAULT_TSCONFIG_MARKER_CONTENT,
+        severity: "medium",
+        ignorePackages: [],
+    },
+];
+
+/**
+ * Required-file enforcement configuration
+ */
+const filesConfigSchema = z.object({
+    enabled: z.boolean().default(true).describe("Enable required-file checks"),
+    rules: z.array(requiredFileRuleSchema).default(DEFAULT_REQUIRED_FILE_RULES).describe("Required-file rules enforced at each package root"),
+});
+
+/**
  * Knip configuration
  */
 const knipConfigSchema = z.object({
@@ -231,6 +289,7 @@ export const configSchema = z.object({
     build: buildConfigSchema.optional().describe("Build configuration"),
     circular: circularConfigSchema.optional().describe("Circular dependency detection configuration"),
     deps: depsConfigSchema.optional().describe("Dependency management configuration"),
+    files: filesConfigSchema.optional().describe("Required-file enforcement (eslint configs, tsconfig markers)"),
     knip: knipConfigSchema.optional().describe("Knip dead-code analysis configuration"),
     packageJson: packageJsonConfigSchema.optional().describe("Package.json hygiene configuration"),
     publish: publishConfigSchema.optional().describe("Publish configuration"),
@@ -270,3 +329,5 @@ export type TsconfigConfig = z.infer<typeof tsconfigConfigSchema>;
 export type TsconfigContentConfig = z.infer<typeof tsconfigContentSchema>;
 export type CircularConfig = z.infer<typeof circularConfigSchema>;
 export type KnipSchemaConfig = z.infer<typeof knipConfigSchema>;
+export type FilesConfig = z.infer<typeof filesConfigSchema>;
+export type RequiredFileRule = z.infer<typeof requiredFileRuleSchema>;

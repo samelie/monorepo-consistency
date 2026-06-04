@@ -24,6 +24,8 @@ Monorepo consistency and maintenance toolkit. CLI binary: `mono`. Package: `@add
 | Preview build order | `mono build --dry-run` |
 | Mirror CI locally | `mono ci mirror` |
 | Init publish repo | `mono publish init my-pkg packages/my-pkg` |
+| Check required files | `mono config check --json` (eslint configs + tsconfig markers) |
+| Create missing files | `mono config fix --add-missing` (add `--dry-run` to preview) |
 | Dump config | `mono config show` |
 | Generate JSON schema | `mono schema` |
 
@@ -73,6 +75,12 @@ src/
 - Filters `@domain/*` paths to only those matching package.json dependencies
 - Generates `tsconfig.json` + `tsconfig.typecheck.json` per package
 - **Never hand-edit generated tsconfigs** — re-run `mono tsconfig generate`
+
+### Required Files (`files` config section)
+- Every package must have one of `eslint.config.mjs`/`eslint.config.ts` (must contain `@adddog/eslint`) and one of `web.tsconfig.json`/`node.tsconfig.json`/`builder.tsconfig.json` — at same level as package.json
+- `mono config check` flags `missing-*`/`invalid-*`; `mono config fix --add-missing` creates missing files
+- Created eslint config: `import config from "@adddog/eslint"; export default config()`. Created marker: `{}` (web vs node picked by dep heuristic — vue/react/vite → web)
+- Rules configurable via `files.rules` in config (anyOf, createAs, defaultContent, mustContain, severity, ignorePackages)
 
 ### Programmatic API
 Package exports all domain handlers and tsconfig builders:

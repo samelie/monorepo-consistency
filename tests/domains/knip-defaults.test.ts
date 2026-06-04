@@ -55,7 +55,8 @@ describe("knip defaults", () => {
         });
 
         it("should have empty arrays for user-configurable lists", () => {
-            expect(defaultKnipConfig.ignoreBinaries).toEqual([]);
+            // tsgo runs via @typescript/native-preview, invisible to knip's binary resolution
+            expect(defaultKnipConfig.ignoreBinaries).toEqual(["tsgo"]);
             expect(defaultKnipConfig.ignoreDependencies).toEqual([]);
             expect(defaultKnipConfig.ignoreMembers).toEqual([]);
             expect(defaultKnipConfig.ignoreUnresolved).toEqual([]);

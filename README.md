@@ -610,6 +610,58 @@ In strict mode, additional checks are performed:
 mono tsconfig validate packages/shadcn-vue-design-system/tsconfig.json park-app/apps/webui/tsconfig.json
 ```
 
+## Required Files Enforcement
+
+Every workspace package must have certain files at the same level as its `package.json`. Enforced by the `files` config section (schema-driven, with built-in defaults).
+
+**Default rules:**
+
+| Rule | One of | Content enforcement | Created on fix |
+|------|--------|---------------------|----------------|
+| `eslint-config` | `eslint.config.mjs`, `eslint.config.ts` | Must contain `@adddog/eslint` | `eslint.config.mjs` with the shared-config import |
+| `tsconfig-marker` | `web.tsconfig.json`, `node.tsconfig.json`, `builder.tsconfig.json` | None (markers carry per-package overrides) | `{}` — web vs node picked by dependency heuristic (vue/react/vite/etc → web) |
+
+**Check:**
+```bash
+mono config check          # flags missing-eslint-config, invalid-eslint-config, missing-tsconfig-marker
+mono config check --json   # machine-readable
+```
+
+**Fix:**
+```bash
+mono config fix --add-missing            # creates missing files
+mono config fix --add-missing --dry-run  # preview
+```
+
+Created `eslint.config.mjs` content:
+```js
+import config from "@adddog/eslint";
+
+export default config()
+```
+
+**Customizing rules** in your config file:
+```json
+{
+    "files": {
+        "enabled": true,
+        "rules": [
+            {
+                "name": "eslint-config",
+                "anyOf": ["eslint.config.mjs", "eslint.config.ts"],
+                "createAs": "eslint.config.mjs",
+                "defaultContent": "import config from \"@adddog/eslint\";\n\nexport default config()\n",
+                "mustContain": "@adddog/eslint",
+                "severity": "medium",
+                "ignorePackages": ["@adddog/eslint"]
+            }
+        ]
+    }
+}
+```
+
+Rules without `createAs` listing both `web.tsconfig.json` and `node.tsconfig.json` use the dependency heuristic on fix; other rules default to the first `anyOf` entry. Existing files are never overwritten — `mustContain` violations are report-only.
+
 ## Practical Workflows
 
 ### Setting Up a New Package

@@ -15,6 +15,7 @@ export function createConfigCommand(): Command {
         .option("--eslint", "check ESLint configs")
         .option("--package-json", "check package.json files")
         .option("--all", "check all configs", true)
+        .option("--json", "output as JSON")
         .addOption(
             new Option("--severity <level>", "minimum severity to report")
                 .choices(["error", "warn", "info"])
