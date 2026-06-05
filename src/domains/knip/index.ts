@@ -117,7 +117,8 @@ async function addKnipScriptToPackageJson(pkgPath: string): Promise<boolean> {
     const content = await readFile(pkgJsonPath, "utf-8");
     const pkg = JSON.parse(content);
 
-    if (pkg.scripts?.knip === "knip") {
+    // Any existing knip script (including custom no-ops like deploy bundles) is preserved
+    if (pkg.scripts?.knip) {
         return false;
     }
 

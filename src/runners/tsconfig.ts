@@ -1,6 +1,6 @@
 import type { TsconfigConfig } from "../config/schema";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import process from "node:process";
 import mergeWith from "lodash/mergeWith";
 import {
@@ -116,6 +116,18 @@ function buildBaseConfig(schema?: TsconfigConfig): Record<string, unknown> {
 }
 
 /**
+ * Check whether the package owning a stub file declares vitest itself
+ */
+function hasVitestDep(pkgDir: string): boolean {
+    const pkg = readJsonSafe(join(pkgDir, "package.json"));
+    const deps = {
+        ...(pkg.dependencies as Record<string, string> | undefined),
+        ...(pkg.devDependencies as Record<string, string> | undefined),
+    };
+    return "vitest" in deps;
+}
+
+/**
  * Build a web tsconfig
  * Merge: base → WEB defaults → schema.web → local stub
  */
@@ -134,6 +146,14 @@ function buildWebConfig(
         config = configMerge(config, rest);
     }
     delete config.extends;
+    // "vitest/globals" types only valid when the package declares vitest —
+    // otherwise knip flags it unresolved and tsc relies on accidental hoisting
+    if (!hasVitestDep(dirname(localStubPath))) {
+        const co = config.compilerOptions as Record<string, unknown> | undefined;
+        if (co && Array.isArray(co.types)) {
+            co.types = (co.types as string[]).filter(t => t !== "vitest/globals");
+        }
+    }
     return config;
 }
 

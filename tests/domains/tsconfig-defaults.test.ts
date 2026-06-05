@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -52,7 +52,8 @@ describe("tsconfig internal defaults", () => {
             const co = config.compilerOptions as Record<string, unknown>;
             // WEB lib fully replaces superbase lib (array-replace semantics)
             expect(co.lib).toEqual([...WEB_COMPILER_OPTIONS.lib]);
-            expect(co.types).toEqual([...WEB_COMPILER_OPTIONS.types]);
+            // No package.json beside the stub → no vitest dep → vitest/globals filtered
+            expect(co.types).toEqual(["vite/client"]);
             // Still has superbase options
             expect(co.strict).toBe(true);
             expect(co.resolveJsonModule).toBe(true);
@@ -66,7 +67,7 @@ describe("tsconfig internal defaults", () => {
             } as never);
             const co = config.compilerOptions as Record<string, unknown>;
             expect(co.jsx).toBe("react-jsx");
-            expect(co.types).toEqual([...WEB_COMPILER_OPTIONS.types]);
+            expect(co.types).toEqual(["vite/client"]);
         });
     });
 
@@ -145,8 +146,9 @@ describe("tsconfig internal defaults", () => {
             expect(co.moduleResolution).toBe("bundler");
             expect(co.erasableSyntaxOnly).toBe(true);
 
-            // Web-specific overrides (array-replace semantics)
-            expect(co.types).toEqual(["vite/client", "vitest/globals"]);
+            // Web-specific overrides (array-replace semantics); vitest/globals
+            // filtered because no package.json with a vitest dep beside the stub
+            expect(co.types).toEqual(["vite/client"]);
             expect(co.lib).toEqual(["ES2022", "DOM", "DOM.Iterable", "WebWorker"]);
 
             // Base include/exclude
@@ -230,6 +232,34 @@ describe("tsconfig internal defaults", () => {
             writeFileSync(stubPath, JSON.stringify({ include: [] }));
             const config = buildWebConfig(stubPath);
             expect(config.include).toEqual([]);
+        });
+
+        it("keeps vitest/globals types when the package declares vitest", () => {
+            const pkgDir = join(tmpDir, "with-vitest");
+            mkdirSync(pkgDir, { recursive: true });
+            writeFileSync(join(pkgDir, "package.json"), JSON.stringify({
+                name: "fixture-with-vitest",
+                devDependencies: { vitest: "^4.0.0" },
+            }));
+            const stubPath = join(pkgDir, "web.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({}));
+            const config = buildWebConfig(stubPath);
+            const co = config.compilerOptions as Record<string, unknown>;
+            expect(co.types).toEqual(["vite/client", "vitest/globals"]);
+        });
+
+        it("drops vitest/globals types when the package lacks vitest", () => {
+            const pkgDir = join(tmpDir, "without-vitest");
+            mkdirSync(pkgDir, { recursive: true });
+            writeFileSync(join(pkgDir, "package.json"), JSON.stringify({
+                name: "fixture-without-vitest",
+                devDependencies: {},
+            }));
+            const stubPath = join(pkgDir, "web.tsconfig.json");
+            writeFileSync(stubPath, JSON.stringify({}));
+            const config = buildWebConfig(stubPath);
+            const co = config.compilerOptions as Record<string, unknown>;
+            expect(co.types).toEqual(["vite/client"]);
         });
     });
 });
