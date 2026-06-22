@@ -46,15 +46,15 @@
   "devDependencies": {
     "@types/lodash": "^4.17.24",
     "@types/madge": "^5.0.3",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.0.0",
     "@typescript/native-preview": "beta",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.9",
     "bumpp": "^11.1.0",
-    "eslint": "^10.4.1",
-    "knip": "^6.15.0",
+    "eslint": "^10.5.0",
+    "knip": "^6.17.1",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "bundledDeps": true,
   "peerDependencies": {
