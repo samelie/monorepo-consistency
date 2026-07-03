@@ -50,8 +50,8 @@
     "@typescript/native-preview": "beta",
     "@vitest/coverage-v8": "^4.1.9",
     "bumpp": "^11.1.0",
-    "eslint": "^10.5.0",
-    "knip": "^6.20.0",
+    "eslint": "^10.6.0",
+    "knip": "^6.23.0",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "vitest": "^4.1.9"
