@@ -46,12 +46,12 @@
   "devDependencies": {
     "@types/lodash": "^4.17.24",
     "@types/madge": "^5.0.3",
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.1",
     "@typescript/native-preview": "beta",
     "@vitest/coverage-v8": "^4.1.10",
     "bumpp": "^11.1.0",
-    "eslint": "^10.6.0",
-    "knip": "^6.25.0",
+    "eslint": "^10.7.0",
+    "knip": "^6.26.0",
     "tsup": "^8.5.1",
     "tsx": "^4.23.0",
     "vitest": "^4.1.10"
