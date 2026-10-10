@@ -1,23 +1,4 @@
-import { isAbsolute, resolve } from "node:path";
-import process from "node:process";
 import { z } from "zod/v4";
-
-/**
- * Path schema that supports both relative and absolute paths
- */
-const pathSchema = z.string().transform((path, ctx) => {
-    try {
-    // Convert relative paths to absolute
-        const resolvedPath = isAbsolute(path) ? path : resolve(process.cwd(), path);
-        return resolvedPath;
-    } catch (error) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `Invalid path: ${String(error)}`,
-        });
-        return z.NEVER;
-    }
-});
 
 /**
  * Command runner options
@@ -31,8 +12,9 @@ const commandRunnerSchema = z.enum(["npx", "pnpx", "yarn", "bunx"])
  * @see https://github.com/antfu-collective/taze
  */
 const tazeConfigSchema = z.object({
-    runner: commandRunnerSchema.describe("Command runner for taze"),
-    configPath: pathSchema.optional().describe("Path to taze configuration file"),
+    runner: commandRunnerSchema.optional().describe("Legacy runner setting; locally installed Taze is always used"),
+    configPath: z.string().optional().describe("Path to Taze configuration relative to the workspace root"),
+    ignorePnpmfile: z.boolean().optional().describe("Skip pnpmfile hooks during the upgrade install only"),
 });
 
 /**

@@ -2,7 +2,7 @@ import type { Change, CheckResult, CommandOptions, FixResult, Issue, ReportOptio
 import { ConfigManager } from "../../config/loader";
 import { runTaze } from "../../runners/taze";
 import * as logger from "../../utils/logger";
-import { getWorkspaceInfo } from "../../utils/workspace";
+import { findWorkspaceRoot, getWorkspaceInfo } from "../../utils/workspace";
 
 interface DepsCheckOptions extends CommandOptions {
     unused?: boolean;
@@ -29,6 +29,8 @@ interface DepsUpdateOptions extends CommandOptions {
     includeLocked?: boolean;
     all?: boolean;
     dryRun?: boolean;
+    peer?: boolean;
+    report?: string;
 }
 
 interface DepsUpgradeOptions extends CommandOptions {
@@ -161,58 +163,14 @@ const update = async (options: DepsUpdateOptions): Promise<void> => {
     try {
         logger.debug("Running dependency updates with taze...");
 
-        // Get workspace info to find monorepo root
-        const workspace = await getWorkspaceInfo(options.cwd);
-
-        // Get configuration if available
-        let tazeConfig;
-        try {
-            const configManager = ConfigManager.getInstance();
-            const config = configManager.getConfig();
-            tazeConfig = config?.deps?.taze;
-        } catch {
-            // No config loaded, use defaults
-            tazeConfig = undefined;
-        }
-
-        // Build CLI arguments for taze
-        const args: string[] = [];
-
-        // Add mode
-        if (options.major) args.push("major");
-        else if (options.minor) args.push("minor");
-        else if (options.patch) args.push("patch");
-
-        // Add flags
-        if (options.interactive) args.push("--interactive");
-        if (options.write) args.push("--write");
-        if (options.install) args.push("--install");
-        if (options.recursive !== false) args.push("--recursive");
-        if (options.includeLocked) args.push("--include-locked");
-        if (options.all) args.push("--all");
-
-        // Add filters
-        if (options.filter?.length) {
-            args.push("--include", options.filter.join(","));
-        }
-        if (options.exclude?.length) {
-            args.push("--exclude", options.exclude.join(","));
-        }
-
-        // Dry run just logs the command
-        if (options.dryRun) {
-            const runner = tazeConfig?.runner || "npx";
-            logger.info(`[DRY RUN] Would execute from ${workspace.root}: ${runner} taze ${args.join(" ")}`);
-            spinner.succeed("Dependency update preview complete");
-            return;
-        }
-
-        // Run taze from monorepo root
+        const root = await findWorkspaceRoot(options.cwd);
+        const tazeConfig = ConfigManager.getInstance().getConfig()?.deps?.taze;
         await runTaze({
+            ...options,
             ...(tazeConfig ? { config: tazeConfig } : {}),
-            args,
-            cwd: workspace.root,
-            silent: false,
+            mode: options.major ? "major" : options.minor ? "minor" : options.patch ? "patch" : "default",
+            ...(options.filter ? { include: options.filter } : {}),
+            cwd: root,
         });
 
         spinner.succeed("Dependency update complete");
@@ -256,46 +214,20 @@ const upgrade = async (options: DepsUpgradeOptions): Promise<UpgradeResult> => {
     spinner.start();
 
     try {
-        const workspace = await getWorkspaceInfo(options.cwd);
-
-        // Get taze config if available
-        let tazeConfig;
-        try {
-            const configManager = ConfigManager.getInstance();
-            const config = configManager.getConfig();
-            tazeConfig = config?.deps?.taze;
-        } catch {
-            tazeConfig = undefined;
-        }
-
-        // Build taze arguments: taze [mode] -r --include <dep> [-w] [--install]
-        const args: string[] = [mode, "--recursive", "--include", dependency];
-
-        if (write) {
-            args.push("--write");
-        }
-
-        if (install) {
-            args.push("--install");
-        }
-
-        const runner = tazeConfig?.runner || "npx";
-
-        if (dryRun) {
-            logger.info(`[DRY RUN] Would execute: ${runner} taze ${args.join(" ")}`);
-            spinner.succeed(`Upgrade preview complete for ${dependency}`);
-            return { success: true, dependency, mode, dryRun: true };
-        }
-
+        const root = await findWorkspaceRoot(options.cwd);
+        const tazeConfig = ConfigManager.getInstance().getConfig()?.deps?.taze;
         await runTaze({
             ...(tazeConfig ? { config: tazeConfig } : {}),
-            args,
-            cwd: workspace.root,
-            silent: false,
+            mode,
+            include: [dependency],
+            write,
+            install,
+            dryRun,
+            cwd: root,
         });
 
         spinner.succeed(`Upgraded ${dependency} (${mode})`);
-        return { success: true, dependency, mode, dryRun: false };
+        return { success: true, dependency, mode, dryRun: !!dryRun };
     } catch (error) {
         spinner.fail(`Failed to upgrade ${dependency}`);
         throw error;

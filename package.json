@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@adddog/zod-to-json-schema": "workspace:*",
-    "chalk": "^6.0.0",
+    "chalk": "^6.0.1",
     "commander": "^15.0.0",
     "dpdm": "^4.3.0",
     "fast-glob": "^3.3.3",
@@ -39,6 +39,7 @@
     "madge": "^8.0.0",
     "minimatch": "^10.2.6",
     "ora": "^9.4.1",
+    "taze": "^21.3.0",
     "yaml": "^2.9.1",
     "zod": "^4.6.5",
     "zx": "^8.8.5"
@@ -46,19 +47,19 @@
   "devDependencies": {
     "@types/lodash": "^4.17.25",
     "@types/madge": "^5.0.3",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.4",
     "@typescript/native-preview": "beta",
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "bumpp": "^12.3.0",
-    "eslint": "^10.10.0",
-    "knip": "^6.35.1",
+    "eslint": "^10.12.0",
+    "knip": "^6.39.0",
     "tsup": "^8.5.1",
-    "tsx": "^4.23.13",
-    "vitest": "^5.0.0"
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.3"
   },
   "bundledDeps": true,
   "peerDependencies": {
-    "@vue/compiler-sfc": "^3.5.22"
+    "@vue/compiler-sfc": "^3.5.43"
   },
   "engines": {
     "node": ">= 22",

@@ -89,6 +89,8 @@ export function createDepsCommand(): Command {
         .option("--install", "install dependencies after updating")
         .option("-r, --recursive", "recursively update in workspace", true)
         .option("-l, --include-locked", "include locked dependencies")
+        .option("--peer", "include peer dependencies")
+        .option("--report <path>", "write dependency resolution metadata")
         .option("--all", "show all packages (including up-to-date)")
         .option("--dry-run", "preview updates without applying")
         .addOption(
@@ -117,7 +119,7 @@ export function createDepsCommand(): Command {
         .option("--patch", "only patch version upgrades")
         .option("-w, --write", "write changes to package.json files")
         .option("--install", "run install after upgrading")
-        .option("--dry-run", "preview the command without executing")
+        .option("--dry-run", "preview available updates without applying")
         .addHelpText(
             "after",
             `
@@ -158,13 +160,14 @@ Examples:
         .option("--minor", "show minor updates")
         .option("--patch", "show patch updates")
         .option("-l, --include-locked", "include locked dependencies")
+        .option("--peer", "include peer dependencies")
+        .option("--report <path>", "write dependency resolution metadata")
         .option("--json", "output as JSON")
         .addOption(
             new Option("--filter <packages...>", "filter specific packages"),
         )
         .action(async options => {
             try {
-                // Use update with dry-run and all flags
                 await depsHandler.update({
                     ...options,
                     dryRun: true,
