@@ -5,12 +5,13 @@ import { appendFile, readFile } from "node:fs/promises";
 import process from "node:process";
 import { Command } from "commander";
 import { loadConfig } from "../config/loader";
-import { ciPlanSchema, collectCiPlan, executableTargets, selectShard, shardRequirements } from "../domains/ci/planner";
+import { ciPlanSchema, collectCiPlan, executableTargets, selectShard, shardBuilds, shardRequirements } from "../domains/ci/planner";
 import { ciSchedulingSchema, ciTasks } from "../domains/ci/policy";
+import { executeCommand } from "../domains/ci/process";
 import { runCiPlan } from "../domains/ci/runner";
 import { findWorkspaceRoot } from "../utils/workspace";
 
-interface CiOptions { base?: string; tasks: string; plan?: string; shard?: string }
+interface CiOptions { base?: string; tasks: string; plan?: string; shard?: string; exclude?: string[] }
 
 const parseTasks = (value: string) => value.split(",").map(entry => {
     const task = ciTasks.find(task => task === entry);
@@ -28,15 +29,16 @@ const loadPlan = async (options: CiOptions, globals: { cwd?: string; config?: st
     const root = await findWorkspaceRoot(globals.cwd);
     const config = await loadConfig({ cwd: root, configPath: globals.config });
     const policy = ciSchedulingSchema.parse(config.ci?.scheduling ?? {});
+    const buildOrder = (config as { build?: { orderedPackages?: string[] } }).build?.orderedPackages ?? [];
     if (options.plan && options.base) throw new Error("Use either --plan or --base");
     let plan: CiPlan = options.plan
         ? ciPlanSchema.parse(JSON.parse(await readFile(options.plan, "utf8")))
-        : await collectCiPlan(root, policy, tasks, options.base);
+        : await collectCiPlan(root, policy, tasks, options.base, buildOrder);
     if (options.shard) {
         const { shard, of } = parseShard(options.shard);
         plan = selectShard(plan, shard, of);
     }
-    return { root, plan };
+    return { root, plan, buildOrder };
 };
 
 const filterTasks = (plan: CiPlan, tasks: readonly CiTask[]): CiPlan => ({
@@ -65,18 +67,20 @@ const summarize = (plan: CiPlan, results: CiResult[]) => {
 
 export const createCiCommand = (): Command => {
     const ci = new Command("ci").description("Plan and run bounded direct workspace checks");
-    for (const name of ["plan", "run", "mirror", "matrix"]) {
+    for (const name of ["plan", "run", "mirror", "matrix", "build"]) {
         const description = {
             plan: "Print exact CI targets as JSON",
             run: "Run the same planned CI targets",
             mirror: "Run the same planned CI targets",
             matrix: "Print the GitHub Actions shard matrix (with per-shard requirements) for a plan",
+            build: "Build only the build.orderedPackages the planned packages depend on, in order",
         }[name];
         ci.command(name)
             .description(description!)
             .option("--base <ref>", "select changes and dependents since a verified git ref")
             .option("--plan <file>", "execute a previously printed JSON plan")
             .option("--shard <index/count>", "restrict to one deterministic shard of the plan")
+            .option("--exclude <packages...>", "build: skip packages already built by the caller")
             .option("--tasks <tasks>", "comma-separated test,types,lint,knip", name === "mirror" ? "types,lint" : "test,types,lint,knip")
             .action(async (options: CiOptions, command: Command) => {
                 const controller = new AbortController();
@@ -91,6 +95,16 @@ export const createCiCommand = (): Command => {
                     controller.signal.throwIfAborted();
                     if (name === "plan") {
                         process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+                        return;
+                    }
+                    if (name === "build") {
+                        const builds = shardBuilds(plan, loaded.buildOrder).filter(entry => !options.exclude?.includes(entry));
+                        process.stdout.write(`CI build ${builds.length} prerequisite packages: ${builds.join(" ") || "none"}\n`);
+                        for (const entry of builds) {
+                            controller.signal.throwIfAborted();
+                            const exitCode = await executeCommand("pnpm", ["--filter", entry, "run", "build"], loaded.root, controller.signal);
+                            if (exitCode !== 0) throw new Error(`build of ${entry} exited ${exitCode}`);
+                        }
                         return;
                     }
                     if (name === "matrix") {

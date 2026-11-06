@@ -7,7 +7,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { ciPlanSchema, executableTargets, planCi, selectShard, shardRequirements } from "../../src/domains/ci/planner";
+import { ciPlanSchema, executableTargets, planCi, selectShard, shardBuilds, shardRequirements } from "../../src/domains/ci/planner";
 import { ciSchedulingSchema } from "../../src/domains/ci/policy";
 import { captureCommand } from "../../src/domains/ci/process";
 import { runCiPlan } from "../../src/domains/ci/runner";
@@ -186,11 +186,27 @@ describe("ci policy extensions", () => {
         const plan = planCi(local, extended, ["lint"]);
         expect(shardRequirements(plan)).toEqual([]);
     });
+
+    it("builds only the ordered prerequisites in each package's workspace dependency closure", () => {
+        const graph: WorkspaceInfo = {
+            ...workspace,
+            packages: [
+                { ...pkg("tool", "tool", { build: "tsup" }) },
+                { ...pkg("proto", "proto", { build: "tsup" }), devDependencies: { tool: "workspace:*" } },
+                { ...pkg("server", "server"), dependencies: { proto: "workspace:*" } },
+                { ...pkg("alone", "alone") },
+            ],
+        };
+        const plan = planCi(graph, ciSchedulingSchema.parse({}), ["test"], undefined, ["tool", "unrelated", "proto"]);
+        expect(plan.builds).toEqual({ tool: ["tool"], proto: ["tool", "proto"], server: ["tool", "proto"] });
+        expect(shardBuilds({ ...plan, packages: ["alone"] }, ["tool", "proto"])).toEqual([]);
+        expect(shardBuilds({ ...plan, packages: ["server", "alone"] }, ["proto", "tool"])).toEqual(["proto", "tool"]);
+    });
 });
 
 describe("ci runner bounds and reporting", () => {
     const single = (command: string, args: string[]): CiPlan => ({
-        reason: "runner", concurrency: 1, timeoutMinutes: 15, shards: 1, packages: ["a"], omitted: [], placeholders: [], requires: {},
+        reason: "runner", concurrency: 1, timeoutMinutes: 15, shards: 1, packages: ["a"], omitted: [], placeholders: [], requires: {}, builds: {},
         targets: [{ package: "a", task: "test", command, args }],
     });
 

@@ -25,6 +25,8 @@ export interface CiPlan {
     omitted: { package: string; task: CiTask; reason: string }[];
     placeholders: { package: string; task: CiTask; script: string }[];
     requires: Record<string, CiRequirement[]>;
+    // build.orderedPackages entries each package needs before its checks, in build order
+    builds: Record<string, string[]>;
 }
 
 export const ciPlanSchema = z.object({
@@ -37,6 +39,7 @@ export const ciPlanSchema = z.object({
     omitted: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), reason: z.string() })),
     placeholders: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), script: z.string() })),
     requires: z.record(z.string(), z.array(z.enum(ciRequirements))),
+    builds: z.record(z.string(), z.array(z.string())),
 }).refine(plan => new Set(plan.targets.map(target => `${target.package}:${target.task}`)).size === plan.targets.length, "Duplicate CI target");
 
 const containsPath = (parent: string, child: string) => child === parent || child.startsWith(`${parent}/`);
@@ -81,7 +84,14 @@ export const selectShard = (plan: CiPlan, shard: number, of: number): CiPlan => 
         omitted: plan.omitted.filter(target => owned(target.package)),
         placeholders: plan.placeholders.filter(target => owned(target.package)),
         requires: Object.fromEntries(Object.entries(plan.requires).filter(([name]) => owned(name))),
+        builds: Object.fromEntries(Object.entries(plan.builds).filter(([name]) => owned(name))),
     };
+};
+
+// union of the selected packages' prerequisite builds, kept in configured build order
+export const shardBuilds = (plan: CiPlan, buildOrder: readonly string[]): string[] => {
+    const needed = new Set(plan.packages.flatMap(name => plan.builds[name] ?? []));
+    return buildOrder.filter(name => needed.has(name));
 };
 
 // requirements only matter where a test target will execute
@@ -95,6 +105,7 @@ export const planCi = (
     policy: CiScheduling,
     tasks: readonly CiTask[],
     selection?: { affected: readonly string[]; files: readonly string[] },
+    buildOrder: readonly string[] = [],
 ): CiPlan => {
     if (!Number.isInteger(policy.concurrency) || policy.concurrency < 1 || policy.concurrency > 16) {
         throw new Error("CI concurrency must be an integer between 1 and 16");
@@ -162,9 +173,17 @@ export const planCi = (
         omitted: [],
         placeholders: [],
         requires: {},
+        builds: {},
     };
+    const workspaceDependencies = (pkg: PackageInfo) =>
+        Object.keys({ ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies, ...pkg.peerDependencies }).filter(name => byName.has(name));
     for (const name of plan.packages) {
         const pkg = byName.get(name)!;
+        // set iteration visits additions, so this walks the whole workspace dependency closure once
+        const closure = new Set([name]);
+        for (const member of closure) for (const dependency of workspaceDependencies(byName.get(member)!)) closure.add(dependency);
+        const builds = buildOrder.filter(entry => closure.has(entry));
+        if (builds.length > 0) plan.builds[name] = builds;
         const requires = ciRequirements.filter(requirement => [...inferRequires(pkg), ...(policy.requires?.[name] ?? [])].includes(requirement));
         if (requires.length > 0) plan.requires[name] = requires;
         for (const task of new Set(tasks)) {
@@ -190,7 +209,7 @@ export const planCi = (
 
 const parseList = (text: string) => z.array(z.object({ name: z.string().min(1), path: z.string().min(1) })).parse(JSON.parse(text));
 
-export const collectCiPlan = async (cwd: string, policy: CiScheduling, tasks: readonly CiTask[], base?: string): Promise<CiPlan> => {
+export const collectCiPlan = async (cwd: string, policy: CiScheduling, tasks: readonly CiTask[], base?: string, buildOrder: readonly string[] = []): Promise<CiPlan> => {
     const workspace = await getWorkspaceInfo(cwd);
     const all = parseList(await captureCommand("pnpm", ["-r", "list", "--depth=-1", "--json"], workspace.root));
     const rootPackage = await loadPackageJson(workspace.root);
@@ -201,10 +220,10 @@ export const collectCiPlan = async (cwd: string, policy: CiScheduling, tasks: re
     }
     // re-read every manifest so a collector warning cannot silently remove a check
     await Promise.all(all.map(async pkg => JSON.parse(await readFile(join(pkg.path, "package.json"), "utf8"))));
-    if (!base) return planCi(workspace, policy, tasks);
+    if (!base) return planCi(workspace, policy, tasks, undefined, buildOrder);
     if (base.startsWith("-") || !base.trim()) throw new Error("Invalid CI base ref");
     await captureCommand("git", ["rev-parse", "--verify", `${base}^{commit}`], workspace.root);
     const affected = parseList(await captureCommand("pnpm", ["--filter", `...[${base}]`, "list", "--depth=-1", "--json"], workspace.root));
     const files = (await captureCommand("git", ["diff", "--name-only", "-z", `${base}...HEAD`, "--"], workspace.root)).split("\0").filter(Boolean);
-    return planCi(workspace, policy, tasks, { affected: affected.map(pkg => pkg.name), files });
+    return planCi(workspace, policy, tasks, { affected: affected.map(pkg => pkg.name), files }, buildOrder);
 };
