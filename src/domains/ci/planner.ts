@@ -1,11 +1,11 @@
 import type { PackageInfo, WorkspaceInfo } from "../../types/index";
-import type { CiScheduling, CiTask } from "./policy";
+import type { CiRequirement, CiScheduling, CiTask } from "./policy";
 import { readFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { minimatch } from "minimatch";
 import { z } from "zod/v4";
 import { getWorkspaceInfo, loadPackageJson } from "../../utils/workspace";
-import { ciTasks } from "./policy";
+import { ciRequirements, ciTasks } from "./policy";
 import { captureCommand } from "./process";
 
 export interface CiTarget {
@@ -18,23 +18,77 @@ export interface CiTarget {
 export interface CiPlan {
     reason: string;
     concurrency: number;
+    timeoutMinutes: number;
+    shards: number;
     packages: string[];
     targets: CiTarget[];
-    wrappers: { package: string; task: CiTask; reason: string }[];
+    omitted: { package: string; task: CiTask; reason: string }[];
     placeholders: { package: string; task: CiTask; script: string }[];
+    requires: Record<string, CiRequirement[]>;
 }
 
 export const ciPlanSchema = z.object({
     reason: z.string(),
     concurrency: z.number().int().min(1).max(16),
+    timeoutMinutes: z.number().int().min(1).max(120),
+    shards: z.number().int().min(1).max(16),
     packages: z.array(z.string()),
     targets: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), command: z.string().min(1), args: z.array(z.string()) })),
-    wrappers: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), reason: z.string() })),
+    omitted: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), reason: z.string() })),
     placeholders: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), script: z.string() })),
+    requires: z.record(z.string(), z.array(z.enum(ciRequirements))),
 }).refine(plan => new Set(plan.targets.map(target => `${target.package}:${target.task}`)).size === plan.targets.length, "Duplicate CI target");
 
 const containsPath = (parent: string, child: string) => child === parent || child.startsWith(`${parent}/`);
 const packagePath = (workspace: WorkspaceInfo, pkg: PackageInfo) => relative(workspace.root, pkg.path).split("\\").join("/");
+
+// a package whose own manifest pulls a playwright driver runs its tests against a real browser
+const browserDrivers = ["playwright", "playwright-core", "@playwright/test", "@playwright/mcp", "@vitest/browser", "@vitest/browser-playwright"];
+const inferRequires = (pkg: PackageInfo): CiRequirement[] => {
+    const dependencies = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies };
+    return browserDrivers.some(name => name in dependencies) ? ["chromium"] : [];
+};
+
+// relative cost of one target, measured on the full workspace (knip and tests dominate)
+const taskWeight: Record<CiTask, number> = { types: 1, lint: 2, test: 3, knip: 4 };
+const isPlaceholder = (plan: CiPlan, target: CiTarget) =>
+    plan.placeholders.some(entry => entry.package === target.package && entry.task === target.task);
+export const executableTargets = (plan: CiPlan) => plan.targets.filter(target => !isPlaceholder(plan, target));
+
+// longest-first greedy over whole packages: deterministic, so every shard derives the same split
+const assignShards = (plan: CiPlan): Map<string, number> => {
+    const weights = new Map<string, number>();
+    for (const target of executableTargets(plan)) weights.set(target.package, (weights.get(target.package) ?? 0) + taskWeight[target.task]);
+    const loads: number[] = Array.from({ length: plan.shards }).fill(0) as number[];
+    const assignment = new Map<string, number>();
+    for (const [name, weight] of [...weights].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
+        const shard = loads.indexOf(Math.min(...loads));
+        loads[shard]! += weight;
+        assignment.set(name, shard + 1);
+    }
+    return assignment;
+};
+
+export const selectShard = (plan: CiPlan, shard: number, of: number): CiPlan => {
+    if (of !== plan.shards || !Number.isInteger(shard) || shard < 1 || shard > of) throw new Error(`Invalid shard ${shard}/${of} for a ${plan.shards}-shard plan`);
+    const assignment = assignShards(plan);
+    // packages without executable targets carry only report entries, kept on the first shard
+    const owned = (name: string) => (assignment.get(name) ?? 1) === shard;
+    return {
+        ...plan,
+        packages: plan.packages.filter(owned),
+        targets: executableTargets(plan).filter(target => owned(target.package)),
+        omitted: plan.omitted.filter(target => owned(target.package)),
+        placeholders: plan.placeholders.filter(target => owned(target.package)),
+        requires: Object.fromEntries(Object.entries(plan.requires).filter(([name]) => owned(name))),
+    };
+};
+
+// requirements only matter where a test target will execute
+export const shardRequirements = (plan: CiPlan): CiRequirement[] => {
+    const tested = new Set(executableTargets(plan).filter(target => target.task === "test").map(target => target.package));
+    return ciRequirements.filter(requirement => Object.entries(plan.requires).some(([name, list]) => tested.has(name) && list.includes(requirement)));
+};
 
 export const planCi = (
     workspace: WorkspaceInfo,
@@ -64,6 +118,9 @@ export const planCi = (
         for (const target of targets) {
             if (!byName.has(target)) throw new Error(`CI impact target names unknown package: ${target}`);
         }
+    }
+    for (const name of Object.keys(policy.requires ?? {})) {
+        if (!byName.has(name)) throw new Error(`CI requires names unknown package: ${name}`);
     }
     const expandAll = !selection || selection.files.some(file => policy.allOnChange.some(pattern => minimatch(file, pattern, { dot: true })));
     const selected = new Set(expandAll ? byName.keys() : selection.affected);
@@ -98,17 +155,22 @@ export const planCi = (
     const plan: CiPlan = {
         reason: expandAll ? (selection ? "shared configuration change" : "all workspace packages") : "changed packages and dependents",
         concurrency: policy.concurrency,
+        timeoutMinutes: policy.timeoutMinutes,
+        shards: 1,
         packages: [...selected].sort(),
         targets: [],
-        wrappers: [],
+        omitted: [],
         placeholders: [],
+        requires: {},
     };
     for (const name of plan.packages) {
         const pkg = byName.get(name)!;
+        const requires = ciRequirements.filter(requirement => [...inferRequires(pkg), ...(policy.requires?.[name] ?? [])].includes(requirement));
+        if (requires.length > 0) plan.requires[name] = requires;
         for (const task of new Set(tasks)) {
             const rule = policy.packages[name]?.[task];
-            if (rule?.kind === "children") {
-                plan.wrappers.push({ package: name, task, reason: rule.reason });
+            if (rule?.kind === "children" || rule?.kind === "skip") {
+                plan.omitted.push({ package: name, task, reason: rule.reason });
                 continue;
             }
             const script = rule?.kind === "script" ? rule.script : task;
@@ -121,6 +183,8 @@ export const planCi = (
                 : { package: name, task, command: "pnpm", args: ["--filter", name, "run", script] });
         }
     }
+    const weight = executableTargets(plan).reduce((sum, target) => sum + taskWeight[target.task], 0);
+    plan.shards = Math.min(policy.maxShards, Math.max(1, Math.ceil(weight / policy.shardWeight)));
     return plan;
 };
 

@@ -15,10 +15,16 @@ export const captureCommand = (command: string, args: readonly string[], cwd: st
         });
     });
 
-export const executeCommand = (command: string, args: readonly string[], cwd: string, signal?: AbortSignal): Promise<number> =>
+export type OutputSink = (chunk: Buffer) => void;
+
+export const executeCommand = (command: string, args: readonly string[], cwd: string, signal?: AbortSignal, output?: OutputSink): Promise<number> =>
     new Promise((resolve, reject) => {
         if (signal?.aborted) return resolve(130);
-        const child = spawn(command, args, { cwd, stdio: "inherit", shell: false, detached: process.platform !== "win32" });
+        const child = spawn(command, args, { cwd, stdio: output ? ["ignore", "pipe", "pipe"] : "inherit", shell: false, detached: process.platform !== "win32" });
+        if (output) {
+            child.stdout?.on("data", output);
+            child.stderr?.on("data", output);
+        }
         let failure: Error | undefined;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const stop = (sig: NodeJS.Signals) => {

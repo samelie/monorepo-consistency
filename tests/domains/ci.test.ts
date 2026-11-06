@@ -1,3 +1,4 @@
+import type { CiPlan } from "../../src/domains/ci/planner";
 import type { PackageInfo, WorkspaceInfo } from "../../src/types/index";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,7 +7,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { ciPlanSchema, planCi } from "../../src/domains/ci/planner";
+import { ciPlanSchema, executableTargets, planCi, selectShard, shardRequirements } from "../../src/domains/ci/planner";
 import { ciSchedulingSchema } from "../../src/domains/ci/policy";
 import { captureCommand } from "../../src/domains/ci/process";
 import { runCiPlan } from "../../src/domains/ci/runner";
@@ -52,7 +53,7 @@ describe("ci planning", () => {
     it("expands an aggregator-only change and preserves its mixed local check", () => {
         const plan = planCi(workspace, policy, ["test", "knip"], { affected: ["mixed"], files: ["group/package.json"] });
         expect(plan.targets.map(target => `${target.package}:${target.task}`)).toEqual(["leaf:test", "leaf:knip", "mixed:knip"]);
-        expect(plan.wrappers.map(target => target.package)).toEqual(["mixed"]);
+        expect(plan.omitted.map(target => target.package)).toEqual(["mixed"]);
     });
     it("reports existing echo placeholders distinctly without silently dropping scripts", () => {
         const local = { ...workspace, packages: [pkg("empty", "empty", { test: "echo no tests" })] };
@@ -127,16 +128,118 @@ describe("ci execution", () => {
     });
 });
 
-it("keeps four blocking read-only workflow gates and both moirai gates", async () => {
+describe("ci policy extensions", () => {
+    const local: WorkspaceInfo = {
+        ...workspace,
+        packages: [
+            pkg("browser", "browser", { test: "vitest run", lint: "eslint ." }),
+            pkg("queue", "queue", { test: "vitest run", types: "tsc", knip: "knip" }),
+            pkg("gated", "gated", { test: "vitest run", lint: "eslint ." }),
+            pkg("empty", "empty", { test: "echo none", types: "echo none" }),
+        ].map(entry => entry.name === "browser" ? { ...entry, devDependencies: { "@vitest/browser-playwright": "^5" } } : entry),
+    };
+    const extended = ciSchedulingSchema.parse({
+        maxShards: 3,
+        shardWeight: 2,
+        requires: { queue: ["redis"] },
+        packages: { gated: { test: { kind: "skip", reason: "owned by another gate" } } },
+    });
+
+    it("omits skipped tasks with their reason while keeping the package's other checks", () => {
+        const plan = planCi(local, extended, ["test", "lint"]);
+        expect(plan.omitted).toEqual([{ package: "gated", task: "test", reason: "owned by another gate" }]);
+        expect(plan.targets.map(target => `${target.package}:${target.task}`)).toContain("gated:lint");
+        expect(plan.targets.map(target => `${target.package}:${target.task}`)).not.toContain("gated:test");
+    });
+
+    it("infers chromium from a browser driver dependency and merges declared requirements", () => {
+        const plan = planCi(local, extended, ["test"]);
+        expect(plan.requires).toEqual({ browser: ["chromium"], queue: ["redis"] });
+        expect(() => planCi(local, { ...extended, requires: { missing: ["redis"] } }, ["test"])).toThrow("unknown package");
+        expect(() => ciSchedulingSchema.parse({ requires: { queue: ["postgres"] } })).toThrow();
+    });
+
+    it("partitions executable targets into deterministic whole-package shards", () => {
+        const plan = planCi(local, extended, ["test", "types", "lint", "knip"]);
+        expect(plan.shards).toBe(3);
+        const shards = [1, 2, 3].map(index => selectShard(plan, index, 3));
+        const covered = shards.flatMap(shard => shard.targets.map(target => `${target.package}:${target.task}`)).sort();
+        expect(covered).toEqual(executableTargets(plan).map(target => `${target.package}:${target.task}`).sort());
+        expect(covered.some(target => target.startsWith("empty:"))).toBe(false);
+        expect(shards.flatMap(shard => shard.packages).sort()).toEqual([...plan.packages].sort());
+        for (const shard of shards) expect(shard.targets.every(target => shard.packages.includes(target.package))).toBe(true);
+        expect(shards[0]!.placeholders.map(entry => entry.package)).toContain("empty");
+        expect(selectShard(plan, 2, 3)).toEqual(selectShard(plan, 2, 3));
+        expect(() => selectShard(plan, 4, 3)).toThrow("Invalid shard");
+        expect(() => selectShard(plan, 1, 2)).toThrow("Invalid shard");
+        const withQueue = shards.find(shard => shard.packages.includes("queue"))!;
+        expect(shardRequirements(withQueue)).toContain("redis");
+        expect(shards.filter(shard => shardRequirements(shard).includes("redis"))).toHaveLength(1);
+    });
+
+    it("caps the shard count and keeps small selections on one shard", () => {
+        expect(planCi(local, { ...extended, maxShards: 2 }, ["test", "types", "lint", "knip"]).shards).toBe(2);
+        expect(planCi(local, ciSchedulingSchema.parse({}), ["test"]).shards).toBe(1);
+    });
+
+    it("only provisions requirements for packages whose tests execute", () => {
+        const plan = planCi(local, extended, ["lint"]);
+        expect(shardRequirements(plan)).toEqual([]);
+    });
+});
+
+describe("ci runner bounds and reporting", () => {
+    const single = (command: string, args: string[]): CiPlan => ({
+        reason: "runner", concurrency: 1, timeoutMinutes: 15, shards: 1, packages: ["a"], omitted: [], placeholders: [], requires: {},
+        targets: [{ package: "a", task: "test", command, args }],
+    });
+
+    it("kills a hung target at the timeout, reports 124 and continues", async () => {
+        const plan = single(process.execPath, ["-e", "setInterval(() => {}, 1000)"]);
+        plan.targets.push({ package: "b", task: "test", command: process.execPath, args: ["-e", "process.exit(0)"] });
+        plan.concurrency = 2;
+        const started = performance.now();
+        const results = await runCiPlan(plan, process.cwd(), undefined, undefined, { timeoutMs: 3000, write: () => {} });
+        expect(performance.now() - started).toBeLessThan(15_000);
+        expect(results.find(result => result.target.package === "a")).toMatchObject({ exitCode: 124, timedOut: true });
+        expect(results.find(result => result.target.package === "b")).toMatchObject({ exitCode: 0 });
+    });
+
+    it("prints each target's output as one block and annotates failures", async () => {
+        const lines: string[] = [];
+        const write = (text: string) => lines.push(text);
+        await runCiPlan(single(process.execPath, ["-e", "console.log('ok-output')"]), process.cwd(), undefined, undefined, { grouped: true, write });
+        await runCiPlan(single(process.execPath, ["-e", "console.error('bad-output'); process.exit(3)"]), process.cwd(), undefined, undefined, { grouped: true, write });
+        const text = lines.join("");
+        expect(text).toMatch(/::group::pass a:test exit 0 in [\d.]+s\nok-output\n::endgroup::/);
+        expect(text).toContain("::error title=a:test::exit 3");
+        expect(text).toMatch(/---- FAIL a:test exit 3 in [\d.]+s ----\nbad-output\n---- end a:test ----/);
+    });
+});
+
+it("keeps four blocking read-only sharded gates, the planner checks and the moirai clone gate", async () => {
     const path = fileURLToPath(new URL("../../../../.github/workflows/ci.yaml", import.meta.url));
     const workflow = parse(await readFile(path, "utf8")) as { jobs: Record<string, { steps: { "name"?: string; "run"?: string; "continue-on-error"?: boolean }[] }> };
     const steps = workflow.jobs.validate!.steps;
     for (const [name, task] of [["Run tests", "test"], ["Run type checking", "types"], ["Run linting", "lint"], ["Run Knip analysis", "knip"]]) {
         const step = steps.find(step => step.name === name);
         expect(step?.run).toContain(`--tasks ${task}`);
+        expect(step?.run).toContain(`--shard "$CI_SHARD"`);
         expect(step?.["continue-on-error"]).toBeUndefined();
         expect(step?.run).not.toContain("lint:fix");
     }
-    expect(steps.find(step => step.name === "moirai import-boundary gate")?.run).toContain("@moirai/db");
+    const plan = workflow.jobs.plan!.steps;
+    expect(plan.some(step => step.run?.includes("enforce:check"))).toBe(true);
+    expect(plan.some(step => step.run?.includes("ci matrix"))).toBe(true);
     expect(workflow.jobs["moirai-clone-gate"]?.steps.at(-1)?.run).toContain("gate:clone");
+});
+
+it("never omits the moirai import-boundary lints and hands every member test to the clone gate", async () => {
+    const path = fileURLToPath(new URL("../../../../monorepo.config.json", import.meta.url));
+    const config = JSON.parse(await readFile(path, "utf8")) as { ci: { scheduling: unknown } };
+    const scheduling = ciSchedulingSchema.parse(config.ci.scheduling);
+    for (const name of ["@moirai/eng-cli", "@moirai/db"]) expect(scheduling.packages[name]?.lint).toBeUndefined();
+    const skipped = Object.entries(scheduling.packages).filter(([, rules]) => rules.test?.kind === "skip").map(([name]) => name);
+    expect(skipped.every(name => name.startsWith("@moirai/"))).toBe(true);
+    expect(skipped).toContain("@moirai/eng-cli");
 });

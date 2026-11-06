@@ -43,7 +43,7 @@ describe("declarative CI impacts", () => {
         expect(plan.packages).toContain("child");
         expect(plan.packages).toContain("peer-dependent");
         expect(plan.targets.some(target => target.package === "wrapper")).toBe(false);
-        expect(plan.wrappers).toEqual([{ package: "wrapper", task: "test", reason: "actual wrapper" }]);
+        expect(plan.omitted).toEqual([{ package: "wrapper", task: "test", reason: "actual wrapper" }]);
     });
 
     it("keeps ordinary leaf changes scoped without traversing impact owners or dependencies backwards", () => {
@@ -121,7 +121,7 @@ describe("calendar orchestration on the real workspace inventory", () => {
             const tasks = name === "@mono-cal/webui" ? ["types", "lint", "knip"] : ciTasks;
             expect(plan.targets.filter(target => target.package === name).map(target => target.task)).toEqual(tasks);
         }
-        expect(plan.wrappers.some(target => target.package === "@mono-cal/root")).toBe(false);
+        expect(plan.omitted.some(target => target.package === "@mono-cal/root")).toBe(false);
     });
 
     it("keeps a real devkit leaf change from expanding its orchestration siblings", () => {
