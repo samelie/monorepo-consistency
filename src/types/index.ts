@@ -73,6 +73,8 @@ export interface PackageInfo {
     private: boolean;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
     scripts?: Record<string, string>;
 }
 

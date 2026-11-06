@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import process from "node:process";
 
 export const captureCommand = (command: string, args: readonly string[], cwd: string): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -14,9 +15,35 @@ export const captureCommand = (command: string, args: readonly string[], cwd: st
         });
     });
 
-export const executeCommand = (command: string, args: readonly string[], cwd: string): Promise<number> =>
+export const executeCommand = (command: string, args: readonly string[], cwd: string, signal?: AbortSignal): Promise<number> =>
     new Promise((resolve, reject) => {
-        const child = spawn(command, args, { cwd, stdio: "inherit", shell: false });
-        child.on("error", reject);
-        child.on("close", (code, signal) => resolve(code ?? (signal ? 128 : 1)));
+        if (signal?.aborted) return resolve(130);
+        const child = spawn(command, args, { cwd, stdio: "inherit", shell: false, detached: process.platform !== "win32" });
+        let failure: Error | undefined;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const stop = (sig: NodeJS.Signals) => {
+            if (!child.pid) return;
+            try {
+                if (process.platform === "win32") child.kill(sig);
+                else process.kill(-child.pid, sig);
+            } catch (error) {
+                if (!(error instanceof Error && "code" in error && error.code === "ESRCH")) failure = error instanceof Error ? error : new Error(String(error));
+            }
+        };
+        const abort = () => {
+            stop("SIGTERM");
+            // allow bounded child shutdown, independent database cleanup and final client reaping
+            timer = setTimeout(stop, 150_000, "SIGKILL");
+            timer.unref();
+        };
+        signal?.addEventListener("abort", abort, { once: true });
+        if (signal?.aborted) abort();
+        child.on("error", error => { failure = error; });
+        child.on("close", (code, childSignal) => {
+            if (signal?.aborted) stop("SIGKILL");
+            clearTimeout(timer);
+            signal?.removeEventListener("abort", abort);
+            if (failure) reject(failure);
+            else resolve(signal?.aborted ? 130 : (code ?? (childSignal ? 128 : 1)));
+        });
     });

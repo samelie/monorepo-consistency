@@ -59,6 +59,12 @@ export const planCi = (
             }
         }
     }
+    for (const [owner, targets] of Object.entries(policy.impacts ?? {})) {
+        if (!byName.has(owner)) throw new Error(`CI impact owner names unknown package: ${owner}`);
+        for (const target of targets) {
+            if (!byName.has(target)) throw new Error(`CI impact target names unknown package: ${target}`);
+        }
+    }
     const expandAll = !selection || selection.files.some(file => policy.allOnChange.some(pattern => minimatch(file, pattern, { dot: true })));
     const selected = new Set(expandAll ? byName.keys() : selection.affected);
     for (const name of selected) if (!byName.has(name)) throw new Error(`Affected selection names unknown package: ${name}`);
@@ -69,8 +75,20 @@ export const planCi = (
                 .sort((a, b) => b.path.length - a.path.length)[0];
             if (owner) selected.add(owner.name);
         }
-        // an orchestration manifest can own no dependency edge to its children
-        for (const name of [...selected]) {
+        const dependents = new Map<string, Set<string>>();
+        for (const pkg of workspace.packages) {
+            const dependencies = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies, ...pkg.peerDependencies };
+            for (const dependency of Object.keys(dependencies)) {
+                if (!byName.has(dependency)) continue;
+                const consumers = dependents.get(dependency) ?? new Set<string>();
+                consumers.add(pkg.name);
+                dependents.set(dependency, consumers);
+            }
+        }
+        // set iteration visits additions, closing coverage and consumer edges once even with cycles
+        for (const name of selected) {
+            for (const target of policy.impacts?.[name] ?? []) selected.add(target);
+            for (const dependent of dependents.get(name) ?? []) selected.add(dependent);
             const pkg = byName.get(name)!;
             if (!Object.values(policy.packages[name] ?? {}).some(rule => rule?.kind === "children")) continue;
             const parent = packagePath(workspace, pkg);

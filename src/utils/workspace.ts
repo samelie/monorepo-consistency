@@ -147,6 +147,8 @@ export async function loadPackageJson(packagePath: string): Promise<PackageInfo>
         private: pkg.private || false,
         dependencies: pkg.dependencies,
         devDependencies: pkg.devDependencies,
+        optionalDependencies: pkg.optionalDependencies,
+        peerDependencies: pkg.peerDependencies,
         scripts: pkg.scripts,
     };
 }

@@ -16,6 +16,11 @@ export const createCiCommand = (): Command => {
             .option("--plan <file>", "execute a previously printed JSON plan")
             .option("--tasks <tasks>", "comma-separated test,types,lint,knip", name === "mirror" ? "types,lint" : "test,types,lint,knip")
             .action(async (options: { base?: string; tasks: string; plan?: string }, command: Command) => {
+                const controller = new AbortController();
+                const interrupt = () => controller.abort(new Error("CI cancelled by SIGINT"));
+                const terminate = () => controller.abort(new Error("CI cancelled by SIGTERM"));
+                process.on("SIGINT", interrupt);
+                process.on("SIGTERM", terminate);
                 try {
                     const globals = command.optsWithGlobals();
                     const root = await findWorkspaceRoot(globals.cwd);
@@ -33,18 +38,22 @@ export const createCiCommand = (): Command => {
                     plan.targets = plan.targets.filter(target => tasks.includes(target.task));
                     plan.wrappers = plan.wrappers.filter(target => tasks.includes(target.task));
                     plan.placeholders = plan.placeholders.filter(target => tasks.includes(target.task));
+                    controller.signal.throwIfAborted();
                     if (name === "plan") {
                         process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
                         return;
                     }
                     process.stdout.write(`CI ${plan.reason}: ${plan.targets.length} scripts, ${plan.wrappers.length} wrappers omitted, ${plan.placeholders.length} existing placeholders\n`);
-                    const results = await runCiPlan(plan, root);
+                    const results = await runCiPlan(plan, root, undefined, controller.signal);
                     const failures = results.filter(result => result.exitCode !== 0);
                     process.stdout.write(`${JSON.stringify({ executed: results.length, placeholders: plan.placeholders.length, failures }, null, 2)}\n`);
-                    process.exitCode = failures.length > 0 || (plan.targets.length > 0 && results.length !== plan.targets.length) ? 1 : 0;
+                    process.exitCode = controller.signal.aborted || failures.length > 0 || (plan.targets.length > 0 && results.length !== plan.targets.length) ? 1 : 0;
                 } catch (error) {
                     process.stderr.write(`CI failed: ${String(error)}\n`);
                     process.exitCode = 1;
+                } finally {
+                    process.removeListener("SIGINT", interrupt);
+                    process.removeListener("SIGTERM", terminate);
                 }
             });
     }

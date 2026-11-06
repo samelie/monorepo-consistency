@@ -12,6 +12,7 @@ const taskPolicySchema = z.discriminatedUnion("kind", [
 export const ciSchedulingSchema = z.object({
     concurrency: z.number().int().min(1).max(16).default(2),
     allOnChange: z.array(z.string()).default([]),
+    impacts: z.record(z.string().min(1), z.array(z.string().min(1))).optional(),
     packages: z.record(z.string(), z.partialRecord(z.enum(ciTasks), taskPolicySchema)).default({}),
 });
 
