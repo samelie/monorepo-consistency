@@ -6,7 +6,7 @@ import { minimatch } from "minimatch";
 import { ConfigManager } from "../../config/loader";
 import { DEFAULT_REQUIRED_FILE_RULES } from "../../config/schema";
 import * as logger from "../../utils/logger";
-import { getWorkspaceInfo } from "../../utils/workspace";
+import { getWorkspaceInfo, selectWorkspacePackages } from "../../utils/workspace";
 
 interface ConfigCheckOptions extends CommandOptions {
     tsconfig?: boolean;
@@ -17,6 +17,7 @@ interface ConfigCheckOptions extends CommandOptions {
 }
 
 interface ConfigFixOptions extends CommandOptions {
+    packages?: readonly string[];
     addMissing?: boolean;
     updateScripts?: boolean;
 }
@@ -208,16 +209,17 @@ const fix = async (options: ConfigFixOptions): Promise<FixResult> => {
     spinner.start();
 
     try {
+        const workspace = await getWorkspaceInfo(options.cwd);
+        const packages = selectWorkspacePackages(workspace, options.packages);
         const changes: Change[] = [];
         let failed = 0;
 
         if (options.addMissing) {
             logger.debug("Adding missing configurations...");
-            const workspace = await getWorkspaceInfo(options.cwd);
             const { enabled, rules } = resolveFilesConfig();
 
             if (enabled) {
-                for (const pkg of workspace.packages) {
+                for (const pkg of packages) {
                     for (const rule of rules) {
                         if (rule.ignorePackages.some(pattern => minimatch(pkg.name, pattern))) {
                             continue;

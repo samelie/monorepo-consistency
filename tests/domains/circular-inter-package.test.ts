@@ -1,6 +1,6 @@
 import type { PackageInfo } from "@adddog/..";
 import { describe, expect, it } from "vitest";
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
+
 import { detectInterPackageCycles } from "../../src/index.js";
 
 function makePkg(

@@ -11,6 +11,7 @@ export function createKnipCommand(): Command {
     knip
         .command("generate")
         .description("Generate knip.config.ts for all workspace packages")
+        .option("--packages <names...>", "Limit writes to exact workspace package names")
         .option("--force", "Overwrite existing knip configs", false)
         .option("--dry-run", "Preview changes without writing files", false)
         .action(async options => {

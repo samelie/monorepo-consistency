@@ -55,12 +55,13 @@ export function createConfigCommand(): Command {
     config
         .command("fix")
         .description("Auto-fix configuration issues")
+        .option("--packages <names...>", "Limit writes to exact workspace package names")
         .option("--add-missing", "add missing configs")
         .option("--update-scripts", "update required scripts")
         .option("--dry-run", "preview changes")
         .action(async options => {
             try {
-                const result = await configHandler.fix(options);
+                const result = await configHandler.fix({ ...options, cwd: config.optsWithGlobals().cwd });
 
                 if (options.dryRun) {
                     logger.info("Dry run - no changes applied");

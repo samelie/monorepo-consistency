@@ -70,6 +70,7 @@ About:
             new Option("-t, --type <type>", "Config type to generate")
                 .choices(["web", "node", "builder"]),
         )
+        .option("--packages <names...>", "Limit writes to exact workspace package names")
         .option("--force", "Overwrite existing configs even if up to date", false)
         .option("--dry-run", "Preview changes without writing files", false)
         .action(async options => {

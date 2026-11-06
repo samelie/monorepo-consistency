@@ -8,9 +8,10 @@ import {
 
 } from "../../runners/tsconfig";
 import * as logger from "../../utils/logger";
-import { getWorkspaceInfo } from "../../utils/workspace";
+import { getWorkspaceInfo, selectWorkspacePackages } from "../../utils/workspace";
 
 interface TsconfigGenerateCommandOptions extends CommandOptions {
+    packages?: readonly string[];
     force?: boolean;
     type?: TsconfigType;
 }
@@ -40,6 +41,7 @@ const generate = async (
 ): Promise<TsconfigGenerateResult> => {
     try {
         const workspace = await getWorkspaceInfo(options.cwd);
+        const packages = selectWorkspacePackages(workspace, options.packages);
 
         // Read schema config from ConfigManager (may not be initialized)
         let schemaConfig;
@@ -52,7 +54,7 @@ const generate = async (
 
         const generateOptions: TsconfigGenerateOptions = {
             rootDir: workspace.root,
-            packageDirs: workspace.packages.map(p => p.path),
+            packageDirs: packages.map(p => p.path),
             ...(options.type ? { types: [options.type] } : {}),
             ...(options.dryRun !== undefined ? { dryRun: options.dryRun } : {}),
             ...(options.force !== undefined ? { force: options.force } : {}),

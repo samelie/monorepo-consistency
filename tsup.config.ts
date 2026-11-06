@@ -26,7 +26,7 @@ export default defineConfig([
     },
     // Library API — ESM
     {
-        entry: { index: "src/index.ts" },
+        entry: { index: "src/index.ts", knip: "src/domains/knip/defaults.ts" },
         format: ["esm"],
         platform: "node",
         noExternal,
@@ -44,7 +44,7 @@ export default defineConfig([
     },
     // Library API — CJS (no banner needed, require() is native)
     {
-        entry: { index: "src/index.ts" },
+        entry: { index: "src/index.ts", knip: "src/domains/knip/defaults.ts" },
         format: ["cjs"],
         platform: "node",
         noExternal,

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ciSchedulingSchema } from "../domains/ci/policy";
 
 /**
  * Command runner options
@@ -281,6 +282,7 @@ export const configSchema = z.object({
     ci: z.object({
         enabled: z.boolean().default(false).describe("CI mode"),
         failOnWarning: z.boolean().default(false).describe("Treat warnings as errors in CI"),
+        scheduling: ciSchedulingSchema.optional().describe("Explicit direct-task and orchestration policy"),
     }).optional().describe("CI-specific settings"),
 
     output: z.object({

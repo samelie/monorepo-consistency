@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
+
 import { defaultKnipConfig, defineKnipConfig } from "../../src/index.js";
 
 describe("knip defaults", () => {

@@ -9,6 +9,10 @@ export default {
         "@adddog/zod-to-json-schema",
     ],
     ignoreBinaries: [
+        // clipboard commands belong to host platforms rather than npm dependencies
+        "clip",
         "gh",
+        "pbcopy",
+        "xclip",
     ],
 } satisfies KnipConfig;

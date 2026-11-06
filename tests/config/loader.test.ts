@@ -1,7 +1,6 @@
 import type { TempWorkspace } from "../helpers/workspace.js";
 import { afterEach, describe, expect, it } from "vitest";
 
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
 import { ConfigLoaderError, ConfigManager, loadConfig, loadConfigSync } from "../../src/index.js";
 import { fullConfig, minimalConfig, scriptEnforcementConfig } from "../fixtures/configs.js";
 import { createTempWorkspace } from "../helpers/workspace.js";

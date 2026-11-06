@@ -1,6 +1,6 @@
 import type { TempWorkspace } from "../helpers/workspace.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
+
 import { findWorkspaceRoot, getWorkspaceInfo, loadPackageJson } from "../../src/index.js";
 import { createTempWorkspace } from "../helpers/workspace.js";
 

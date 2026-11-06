@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-// eslint-disable-next-line rad/no-incorrect-pkg-imports
+
 import { augmentWithPlugins } from "../../src/domains/knip/detectors.js";
 
 describe("augmentWithPlugins", () => {

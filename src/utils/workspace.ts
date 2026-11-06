@@ -22,6 +22,25 @@ function isArtifactPath(packagePath: string): boolean {
     return segments.some(segment => ARTIFACT_PATH_SEGMENTS.includes(segment));
 }
 
+export const selectWorkspacePackages = (
+    workspace: WorkspaceInfo,
+    names?: readonly string[],
+): PackageInfo[] => {
+    if (names === undefined) return workspace.packages;
+    if (names.length === 0 || names.some(name => name.trim().length === 0)) {
+        throw new Error("Package selection must contain at least one non-empty package name");
+    }
+
+    const requested = new Set(names);
+    const known = new Set(workspace.packages.map(pkg => pkg.name));
+    const unknown = names.filter(name => !known.has(name));
+    if (unknown.length > 0) {
+        throw new Error(`Unknown workspace package(s): ${unknown.join(", ")}`);
+    }
+
+    return workspace.packages.filter(pkg => requested.has(pkg.name));
+};
+
 /**
  * Find the workspace root by looking for pnpm-workspace.yaml
  */

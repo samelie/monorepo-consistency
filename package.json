@@ -8,6 +8,9 @@
   "exports": {
     ".": {
       "import": "./src/index.ts"
+    },
+    "./knip": {
+      "import": "./src/domains/knip/defaults.ts"
     }
   },
   "main": "./src/index.ts",
@@ -73,6 +76,11 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
+      },
+      "./knip": {
+        "types": "./dist/knip.d.ts",
+        "import": "./dist/knip.js",
+        "require": "./dist/knip.cjs"
       }
     },
     "main": "./dist/index.js",
