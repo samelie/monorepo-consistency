@@ -6,13 +6,24 @@ import process from "node:process";
 import { Command } from "commander";
 import { z } from "zod/v4";
 import { loadConfig } from "../config/loader";
+import { buildCacheEntries, buildCacheManifest, cleanBuildOutputs, isBuildCached, markBuilt } from "../domains/ci/build-cache";
 import { ciPlanSchema, collectCiPlan, executableTargets, selectShard, shardBuilds, shardRequirements } from "../domains/ci/planner";
 import { ciSchedulingSchema, ciTasks } from "../domains/ci/policy";
 import { executeCommand } from "../domains/ci/process";
 import { runCiPlan } from "../domains/ci/runner";
-import { findWorkspaceRoot } from "../utils/workspace";
+import { findWorkspaceRoot, getWorkspaceInfo } from "../utils/workspace";
 
-interface CiOptions { base?: string; tasks: string; plan?: string; shard?: string; exclude?: string[]; durations?: string; durationsOut?: string }
+interface CiOptions {
+    base?: string;
+    tasks: string;
+    plan?: string;
+    shard?: string;
+    exclude?: string[];
+    durations?: string;
+    durationsOut?: string;
+    cacheManifest?: boolean;
+    useCache?: boolean;
+}
 
 const durationsSchema = z.record(z.string(), z.number().nonnegative());
 
@@ -102,6 +113,8 @@ export const createCiCommand = (): Command => {
             .option("--exclude <packages...>", "build: skip packages already built by the caller")
             .option("--durations <file>", "plan: measured {\"pkg:task\": seconds} that size and balance the shards")
             .option("--durations-out <file>", "run: merge each executed target's measured seconds into this file")
+            .option("--cache-manifest", "build: print the actions/cache key and paths for this build list as JSON")
+            .option("--use-cache", "build: skip packages whose restored output matches their content key")
             .option("--tasks <tasks>", "comma-separated test,types,lint,knip", name === "mirror" ? "types,lint" : "test,types,lint,knip")
             .action(async (options: CiOptions, command: Command) => {
                 const controller = new AbortController();
@@ -120,12 +133,27 @@ export const createCiCommand = (): Command => {
                     }
                     if (name === "build") {
                         const builds = shardBuilds(plan, loaded.buildOrder).filter(entry => !options.exclude?.includes(entry));
-                        process.stdout.write(`CI build ${builds.length} prerequisite packages: ${builds.join(" ") || "none"}\n`);
-                        for (const entry of builds) {
-                            controller.signal.throwIfAborted();
-                            const exitCode = await executeCommand("pnpm", ["--filter", entry, "run", "build"], loaded.root, controller.signal);
-                            if (exitCode !== 0) throw new Error(`build of ${entry} exited ${exitCode}`);
+                        const cacheable = options.cacheManifest || options.useCache;
+                        const entries = cacheable ? await buildCacheEntries(loaded.root, (await getWorkspaceInfo(loaded.root)).packages, builds) : [];
+                        if (options.cacheManifest) {
+                            process.stdout.write(`${JSON.stringify(buildCacheManifest(entries, process.env.RUNNER_OS ?? process.platform))}\n`);
+                            return;
                         }
+                        process.stdout.write(`CI build ${builds.length} prerequisite packages: ${builds.join(" ") || "none"}\n`);
+                        let reused = 0;
+                        for (const [index, build] of builds.entries()) {
+                            controller.signal.throwIfAborted();
+                            const entry = entries[index];
+                            if (entry && await isBuildCached(loaded.root, entry)) {
+                                reused++;
+                                continue;
+                            }
+                            if (entry) await cleanBuildOutputs(loaded.root, entry);
+                            const exitCode = await executeCommand("pnpm", ["--filter", build, "run", "build"], loaded.root, controller.signal);
+                            if (exitCode !== 0) throw new Error(`build of ${build} exited ${exitCode}`);
+                            if (entry) await markBuilt(loaded.root, entry);
+                        }
+                        if (options.useCache) process.stdout.write(`CI build reused ${reused} cached, built ${builds.length - reused}\n`);
                         return;
                     }
                     if (name === "matrix") {
