@@ -1,9 +1,10 @@
 import type { CiPlan } from "../domains/ci/planner";
 import type { CiTask } from "../domains/ci/policy";
 import type { CiResult } from "../domains/ci/runner";
-import { appendFile, readFile } from "node:fs/promises";
+import { appendFile, readFile, writeFile } from "node:fs/promises";
 import process from "node:process";
 import { Command } from "commander";
+import { z } from "zod/v4";
 import { loadConfig } from "../config/loader";
 import { ciPlanSchema, collectCiPlan, executableTargets, selectShard, shardBuilds, shardRequirements } from "../domains/ci/planner";
 import { ciSchedulingSchema, ciTasks } from "../domains/ci/policy";
@@ -11,7 +12,25 @@ import { executeCommand } from "../domains/ci/process";
 import { runCiPlan } from "../domains/ci/runner";
 import { findWorkspaceRoot } from "../utils/workspace";
 
-interface CiOptions { base?: string; tasks: string; plan?: string; shard?: string; exclude?: string[] }
+interface CiOptions { base?: string; tasks: string; plan?: string; shard?: string; exclude?: string[]; durations?: string; durationsOut?: string }
+
+const durationsSchema = z.record(z.string(), z.number().nonnegative());
+
+// a missing or unreadable record only costs balance, never the run
+const readDurations = async (file?: string): Promise<Record<string, number>> => {
+    if (!file) return {};
+    try {
+        return durationsSchema.parse(JSON.parse(await readFile(file, "utf8")));
+    } catch {
+        return {};
+    }
+};
+
+// merges this invocation's measured seconds into the file, so one file spans a shard's task steps
+const recordDurations = async (file: string, results: readonly CiResult[]) => {
+    const measured = Object.fromEntries(results.map(result => [`${result.target.package}:${result.target.task}`, Math.round(result.durationMs / 100) / 10]));
+    await writeFile(file, `${JSON.stringify({ ...await readDurations(file), ...measured }, null, 2)}\n`);
+};
 
 const parseTasks = (value: string) => value.split(",").map(entry => {
     const task = ciTasks.find(task => task === entry);
@@ -33,7 +52,7 @@ const loadPlan = async (options: CiOptions, globals: { cwd?: string; config?: st
     if (options.plan && options.base) throw new Error("Use either --plan or --base");
     let plan: CiPlan = options.plan
         ? ciPlanSchema.parse(JSON.parse(await readFile(options.plan, "utf8")))
-        : await collectCiPlan(root, policy, tasks, options.base, buildOrder);
+        : await collectCiPlan(root, policy, tasks, options.base, buildOrder, await readDurations(options.durations));
     if (options.shard) {
         const { shard, of } = parseShard(options.shard);
         plan = selectShard(plan, shard, of);
@@ -81,6 +100,8 @@ export const createCiCommand = (): Command => {
             .option("--plan <file>", "execute a previously printed JSON plan")
             .option("--shard <index/count>", "restrict to one deterministic shard of the plan")
             .option("--exclude <packages...>", "build: skip packages already built by the caller")
+            .option("--durations <file>", "plan: measured {\"pkg:task\": seconds} that size and balance the shards")
+            .option("--durations-out <file>", "run: merge each executed target's measured seconds into this file")
             .option("--tasks <tasks>", "comma-separated test,types,lint,knip", name === "mirror" ? "types,lint" : "test,types,lint,knip")
             .action(async (options: CiOptions, command: Command) => {
                 const controller = new AbortController();
@@ -119,6 +140,7 @@ export const createCiCommand = (): Command => {
                     process.stdout.write(`CI ${plan.reason}${options.shard ? ` (shard ${options.shard})` : ""}: ${runnable.targets.length} scripts, ${plan.omitted.length} omitted, ${plan.placeholders.length} placeholders not executed, ${plan.timeoutMinutes} min per target\n`);
                     const results = await runCiPlan(runnable, loaded.root, undefined, controller.signal, { grouped: process.env.GITHUB_ACTIONS === "true" });
                     const failures = results.filter(result => result.exitCode !== 0);
+                    if (options.durationsOut) await recordDurations(options.durationsOut, results);
                     const summary = summarize(plan, results);
                     process.stdout.write(`${summary}\n`);
                     if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);

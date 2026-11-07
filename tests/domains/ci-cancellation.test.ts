@@ -4,7 +4,7 @@ import { executeCommand } from "../../src/domains/ci/process";
 import { runCiPlan } from "../../src/domains/ci/runner";
 
 const plan: CiPlan = {
-    reason: "cancellation regression", concurrency: 2, timeoutMinutes: 15, shards: 1, packages: ["a", "b"], omitted: [], placeholders: [], requires: {}, builds: {},
+    reason: "cancellation regression", concurrency: 2, timeoutMinutes: 15, shards: 1, packages: ["a", "b"], omitted: [], placeholders: [], requires: {}, builds: {}, seconds: {},
     targets: [
         { package: "a", task: "test", command: "node", args: ["a"] },
         { package: "b", task: "test", command: "node", args: ["b"] },

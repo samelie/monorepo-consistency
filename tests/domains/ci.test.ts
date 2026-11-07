@@ -140,7 +140,7 @@ describe("ci policy extensions", () => {
     };
     const extended = ciSchedulingSchema.parse({
         maxShards: 3,
-        shardWeight: 2,
+        shardSeconds: 2,
         requires: { queue: ["redis"] },
         packages: { gated: { test: { kind: "skip", reason: "owned by another gate" } } },
     });
@@ -182,6 +182,23 @@ describe("ci policy extensions", () => {
         expect(planCi(local, ciSchedulingSchema.parse({}), ["test"]).shards).toBe(1);
     });
 
+    it("sizes and balances shards from measured seconds, estimating unmeasured targets by task median", () => {
+        const policy = ciSchedulingSchema.parse({ maxShards: 4, shardSeconds: 100 });
+        const measured = { "browser:test": 600, "browser:lint": 10, "queue:test": 20, "gated:lint": 30, "elsewhere:lint": 50 };
+        const plan = planCi(local, policy, ["test", "types", "lint", "knip"], undefined, [], measured);
+        expect(plan.seconds["browser:test"]).toBe(600);
+        // queue:types and queue:knip have no measured task at all, so they keep the defaults
+        expect(plan.seconds["queue:types"]).toBe(4);
+        expect(plan.seconds["queue:knip"]).toBe(4);
+        expect(plan.shards).toBe(4);
+        // the heavy package owns a shard; everything else shares the remaining ones
+        const shards = [1, 2, 3, 4].map(index => selectShard(plan, index, 4));
+        const heavy = shards.find(shard => shard.packages.includes("browser"))!;
+        expect(heavy.packages.filter(name => name !== "empty")).toEqual(["browser"]);
+        const unmeasured = planCi(local, policy, ["lint"], undefined, [], { "x:lint": 12, "y:lint": 40, "z:lint": 90 });
+        expect(unmeasured.seconds["browser:lint"]).toBe(40);
+    });
+
     it("only provisions requirements for packages whose tests execute", () => {
         const plan = planCi(local, extended, ["lint"]);
         expect(shardRequirements(plan)).toEqual([]);
@@ -206,7 +223,7 @@ describe("ci policy extensions", () => {
 
 describe("ci runner bounds and reporting", () => {
     const single = (command: string, args: string[]): CiPlan => ({
-        reason: "runner", concurrency: 1, timeoutMinutes: 15, shards: 1, packages: ["a"], omitted: [], placeholders: [], requires: {}, builds: {},
+        reason: "runner", concurrency: 1, timeoutMinutes: 15, shards: 1, packages: ["a"], omitted: [], placeholders: [], requires: {}, builds: {}, seconds: {},
         targets: [{ package: "a", task: "test", command, args }],
     });
 
@@ -255,7 +272,8 @@ it("never omits the moirai import-boundary lints and hands every member test to 
     const config = JSON.parse(await readFile(path, "utf8")) as { ci: { scheduling: unknown } };
     const scheduling = ciSchedulingSchema.parse(config.ci.scheduling);
     for (const name of ["@moirai/eng-cli", "@moirai/db"]) expect(scheduling.packages[name]?.lint).toBeUndefined();
-    const skipped = Object.entries(scheduling.packages).filter(([, rules]) => rules.test?.kind === "skip").map(([name]) => name);
-    expect(skipped.every(name => name.startsWith("@moirai/"))).toBe(true);
-    expect(skipped).toContain("@moirai/eng-cli");
+    const skipped = Object.entries(scheduling.packages).flatMap(([name, rules]) => rules.test?.kind === "skip" ? [{ name, reason: rules.test.reason }] : []);
+    // every skip is either owned by the clone gate or a dated, loudly labelled temporary disable
+    for (const { name, reason } of skipped) expect(name.startsWith("@moirai/") || /^TEMPORARILY DISABLED \d{4}-\d{2}-\d{2} /.test(reason)).toBe(true);
+    expect(skipped.map(entry => entry.name)).toContain("@moirai/eng-cli");
 });

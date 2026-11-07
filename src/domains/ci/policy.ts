@@ -19,7 +19,8 @@ export const ciSchedulingSchema = z.object({
     concurrency: z.number().int().min(1).max(16).default(2),
     timeoutMinutes: z.number().int().min(1).max(120).default(15),
     maxShards: z.number().int().min(1).max(16).default(1),
-    shardWeight: z.number().int().min(1).default(400),
+    // summed target-seconds one shard should carry; measured durations feed it, task defaults otherwise
+    shardSeconds: z.number().int().min(1).default(1800),
     allOnChange: z.array(z.string()).default([]),
     impacts: z.record(z.string().min(1), z.array(z.string().min(1))).optional(),
     requires: z.record(z.string().min(1), z.array(z.enum(ciRequirements))).default({}),

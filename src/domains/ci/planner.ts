@@ -27,6 +27,8 @@ export interface CiPlan {
     requires: Record<string, CiRequirement[]>;
     // build.orderedPackages entries each package needs before its checks, in build order
     builds: Record<string, string[]>;
+    // estimated seconds per executable `package:task`, from the last measured run where available
+    seconds: Record<string, number>;
 }
 
 export const ciPlanSchema = z.object({
@@ -40,6 +42,7 @@ export const ciPlanSchema = z.object({
     placeholders: z.array(z.object({ package: z.string(), task: z.enum(ciTasks), script: z.string() })),
     requires: z.record(z.string(), z.array(z.enum(ciRequirements))),
     builds: z.record(z.string(), z.array(z.string())),
+    seconds: z.record(z.string(), z.number().nonnegative()),
 }).refine(plan => new Set(plan.targets.map(target => `${target.package}:${target.task}`)).size === plan.targets.length, "Duplicate CI target");
 
 const containsPath = (parent: string, child: string) => child === parent || child.startsWith(`${parent}/`);
@@ -52,8 +55,10 @@ const inferRequires = (pkg: PackageInfo): CiRequirement[] => {
     return browserDrivers.some(name => name in dependencies) ? ["chromium"] : [];
 };
 
-// relative cost of one target, measured on the full workspace (knip and tests dominate)
-const taskWeight: Record<CiTask, number> = { types: 1, lint: 2, test: 3, knip: 4 };
+// per-target seconds when a task has no measurement at all (full-run medians, 2026-11-07)
+const defaultSeconds: Record<CiTask, number> = { types: 4, lint: 7, knip: 4, test: 15 };
+const targetKey = (target: Pick<CiTarget, "package" | "task">) => `${target.package}:${target.task}`;
+const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]!;
 const isPlaceholder = (plan: CiPlan, target: CiTarget) =>
     plan.placeholders.some(entry => entry.package === target.package && entry.task === target.task);
 export const executableTargets = (plan: CiPlan) => plan.targets.filter(target => !isPlaceholder(plan, target));
@@ -61,7 +66,7 @@ export const executableTargets = (plan: CiPlan) => plan.targets.filter(target =>
 // longest-first greedy over whole packages: deterministic, so every shard derives the same split
 const assignShards = (plan: CiPlan): Map<string, number> => {
     const weights = new Map<string, number>();
-    for (const target of executableTargets(plan)) weights.set(target.package, (weights.get(target.package) ?? 0) + taskWeight[target.task]);
+    for (const target of executableTargets(plan)) weights.set(target.package, (weights.get(target.package) ?? 0) + (plan.seconds[targetKey(target)] ?? defaultSeconds[target.task]));
     const loads: number[] = Array.from({ length: plan.shards }).fill(0) as number[];
     const assignment = new Map<string, number>();
     for (const [name, weight] of [...weights].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
@@ -85,6 +90,7 @@ export const selectShard = (plan: CiPlan, shard: number, of: number): CiPlan => 
         placeholders: plan.placeholders.filter(target => owned(target.package)),
         requires: Object.fromEntries(Object.entries(plan.requires).filter(([name]) => owned(name))),
         builds: Object.fromEntries(Object.entries(plan.builds).filter(([name]) => owned(name))),
+        seconds: Object.fromEntries(Object.entries(plan.seconds).filter(([key]) => owned(key.slice(0, key.lastIndexOf(":"))))),
     };
 };
 
@@ -106,6 +112,7 @@ export const planCi = (
     tasks: readonly CiTask[],
     selection?: { affected: readonly string[]; files: readonly string[] },
     buildOrder: readonly string[] = [],
+    durations: Readonly<Record<string, number>> = {},
 ): CiPlan => {
     if (!Number.isInteger(policy.concurrency) || policy.concurrency < 1 || policy.concurrency > 16) {
         throw new Error("CI concurrency must be an integer between 1 and 16");
@@ -174,6 +181,7 @@ export const planCi = (
         placeholders: [],
         requires: {},
         builds: {},
+        seconds: {},
     };
     const workspaceDependencies = (pkg: PackageInfo) =>
         Object.keys({ ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies, ...pkg.peerDependencies }).filter(name => byName.has(name));
@@ -202,14 +210,29 @@ export const planCi = (
                 : { package: name, task, command: "pnpm", args: ["--filter", name, "run", script] });
         }
     }
-    const weight = executableTargets(plan).reduce((sum, target) => sum + taskWeight[target.task], 0);
-    plan.shards = Math.min(policy.maxShards, Math.max(1, Math.ceil(weight / policy.shardWeight)));
+    // unmeasured targets take their task's median measured duration, so new packages are never free
+    const estimates = Object.fromEntries(ciTasks.map(task => {
+        const measured = Object.entries(durations)
+            .filter(([key, value]) => key.endsWith(`:${task}`) && Number.isFinite(value) && value >= 0)
+            .map(([, value]) => value);
+        return [task, measured.length > 0 ? median(measured) : defaultSeconds[task]];
+    })) as Record<CiTask, number>;
+    for (const target of executableTargets(plan)) plan.seconds[targetKey(target)] = durations[targetKey(target)] ?? estimates[target.task];
+    const total = Object.values(plan.seconds).reduce((sum, value) => sum + value, 0);
+    plan.shards = Math.min(policy.maxShards, Math.max(1, Math.ceil(total / policy.shardSeconds)));
     return plan;
 };
 
 const parseList = (text: string) => z.array(z.object({ name: z.string().min(1), path: z.string().min(1) })).parse(JSON.parse(text));
 
-export const collectCiPlan = async (cwd: string, policy: CiScheduling, tasks: readonly CiTask[], base?: string, buildOrder: readonly string[] = []): Promise<CiPlan> => {
+export const collectCiPlan = async (
+    cwd: string,
+    policy: CiScheduling,
+    tasks: readonly CiTask[],
+    base?: string,
+    buildOrder: readonly string[] = [],
+    durations: Readonly<Record<string, number>> = {},
+): Promise<CiPlan> => {
     const workspace = await getWorkspaceInfo(cwd);
     const all = parseList(await captureCommand("pnpm", ["-r", "list", "--depth=-1", "--json"], workspace.root));
     const rootPackage = await loadPackageJson(workspace.root);
@@ -220,10 +243,10 @@ export const collectCiPlan = async (cwd: string, policy: CiScheduling, tasks: re
     }
     // re-read every manifest so a collector warning cannot silently remove a check
     await Promise.all(all.map(async pkg => JSON.parse(await readFile(join(pkg.path, "package.json"), "utf8"))));
-    if (!base) return planCi(workspace, policy, tasks, undefined, buildOrder);
+    if (!base) return planCi(workspace, policy, tasks, undefined, buildOrder, durations);
     if (base.startsWith("-") || !base.trim()) throw new Error("Invalid CI base ref");
     await captureCommand("git", ["rev-parse", "--verify", `${base}^{commit}`], workspace.root);
     const affected = parseList(await captureCommand("pnpm", ["--filter", `...[${base}]`, "list", "--depth=-1", "--json"], workspace.root));
     const files = (await captureCommand("git", ["diff", "--name-only", "-z", `${base}...HEAD`, "--"], workspace.root)).split("\0").filter(Boolean);
-    return planCi(workspace, policy, tasks, { affected: affected.map(pkg => pkg.name), files }, buildOrder);
+    return planCi(workspace, policy, tasks, { affected: affected.map(pkg => pkg.name), files }, buildOrder, durations);
 };
