@@ -87,13 +87,17 @@ describe("ci prerequisite build cache", () => {
         expect(existsSync(join(dir, "a", "dist", "tracked.txt"))).toBe(true);
     });
 
-    it("emits one stable cache key and the output paths of cacheable packages only", async () => {
-        const entries = await buildCacheEntries(dir, packages, ["a", "b", "p"]);
-        const manifest = buildCacheManifest(entries, "Linux");
-        expect(manifest.key).toMatch(/^ci-build-Linux-[a-f0-9]{32}$/);
-        expect(buildCacheManifest(entries, "Linux").key).toBe(manifest.key);
-        expect(manifest.paths).toContain("a/dist");
-        expect(manifest.paths.some(path => path.startsWith("p/"))).toBe(false);
-        expect(buildCacheManifest(entries.filter(entry => entry.name === "p"), "Linux")).toEqual({ key: "", paths: [] });
+    it("keys by the shard's builds but keeps one path list for every shard, without prisma builders", async () => {
+        const ordered = packages.filter(entry => entry.name !== "root");
+        const all = await buildCacheEntries(dir, packages, ["a", "b", "p"]);
+        const onlyA = await buildCacheEntries(dir, packages, ["a"]);
+        const full = buildCacheManifest(all, "Linux", ordered, dir);
+        const partial = buildCacheManifest(onlyA, "Linux", ordered, dir);
+        expect(full.key).toMatch(/^ci-build-Linux-[a-f0-9]{32}$/);
+        expect(partial.key).not.toBe(full.key);
+        expect(partial.paths).toEqual(full.paths);
+        expect(full.paths).toContain("b/dist");
+        expect(full.paths.some(path => path.startsWith("p/"))).toBe(false);
+        expect(buildCacheManifest(all.filter(entry => entry.name === "p"), "Linux", ordered, dir)).toEqual({ key: "", paths: [] });
     });
 });

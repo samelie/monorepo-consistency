@@ -52,13 +52,19 @@ export const buildCacheEntries = async (root: string, packages: readonly Package
     }));
 };
 
-// one actions/cache entry per shard build list; markers decide per package, so a prefix restore is safe
-export const buildCacheManifest = (entries: readonly BuildCacheEntry[], os: string) => {
-    const cached = entries.filter(entry => entry.key !== null);
-    if (cached.length === 0) return { key: "", paths: [] as string[] };
+// the path list is the same for every shard and run (actions/cache only restores entries saved with an
+// identical list), so any shard can restore the latest entry; the key covers just this shard's builds and
+// per-package markers decide reuse, which makes outputs restored for packages a shard never builds inert
+export const buildCacheManifest = (entries: readonly BuildCacheEntry[], os: string, cacheable: readonly PackageInfo[], root: string) => {
+    const keyed = entries.filter(entry => entry.key !== null);
+    if (keyed.length === 0) return { key: "", paths: [] as string[] };
+    const dirs = cacheable
+        .filter(pkg => !(pkg.scripts?.build ?? "").includes("prisma generate"))
+        .map(pkg => relative(root, pkg.path).split("\\").join("/"))
+        .sort();
     return {
-        key: `ci-build-${os}-${sha256(cached.map(entry => `${entry.name}=${entry.key}`).join("\n")).slice(0, 32)}`,
-        paths: [...cached.flatMap(entry => outputDirs.map(dir => `${entry.dir}/${dir}`)), markerDir],
+        key: `ci-build-${os}-${sha256(keyed.map(entry => `${entry.name}=${entry.key}`).join("\n")).slice(0, 32)}`,
+        paths: [...dirs.flatMap(dir => outputDirs.map(output => `${dir}/${output}`)), markerDir],
     };
 };
 

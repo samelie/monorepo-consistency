@@ -134,9 +134,12 @@ export const createCiCommand = (): Command => {
                     if (name === "build") {
                         const builds = shardBuilds(plan, loaded.buildOrder).filter(entry => !options.exclude?.includes(entry));
                         const cacheable = options.cacheManifest || options.useCache;
-                        const entries = cacheable ? await buildCacheEntries(loaded.root, (await getWorkspaceInfo(loaded.root)).packages, builds) : [];
+                        const workspacePackages = cacheable ? (await getWorkspaceInfo(loaded.root)).packages : [];
+                        const entries = cacheable ? await buildCacheEntries(loaded.root, workspacePackages, builds) : [];
                         if (options.cacheManifest) {
-                            process.stdout.write(`${JSON.stringify(buildCacheManifest(entries, process.env.RUNNER_OS ?? process.platform))}\n`);
+                            const ordered = loaded.buildOrder.filter(entry => !options.exclude?.includes(entry));
+                            const pathPackages = workspacePackages.filter(pkg => ordered.includes(pkg.name));
+                            process.stdout.write(`${JSON.stringify(buildCacheManifest(entries, process.env.RUNNER_OS ?? process.platform, pathPackages, loaded.root))}\n`);
                             return;
                         }
                         process.stdout.write(`CI build ${builds.length} prerequisite packages: ${builds.join(" ") || "none"}\n`);
