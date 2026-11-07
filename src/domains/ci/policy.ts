@@ -4,7 +4,7 @@ export const ciTasks = ["test", "types", "lint", "knip"] as const;
 export type CiTask = typeof ciTasks[number];
 
 // capabilities the ci workflow provisions before a shard's tests run
-export const ciRequirements = ["chromium", "redis"] as const;
+export const ciRequirements = ["chromium", "redis", "postgres", "doc-ingest"] as const;
 export type CiRequirement = typeof ciRequirements[number];
 
 const taskPolicySchema = z.discriminatedUnion("kind", [

@@ -156,7 +156,7 @@ describe("ci policy extensions", () => {
         const plan = planCi(local, extended, ["test"]);
         expect(plan.requires).toEqual({ browser: ["chromium"], queue: ["redis"] });
         expect(() => planCi(local, { ...extended, requires: { missing: ["redis"] } }, ["test"])).toThrow("unknown package");
-        expect(() => ciSchedulingSchema.parse({ requires: { queue: ["postgres"] } })).toThrow();
+        expect(() => ciSchedulingSchema.parse({ requires: { queue: ["mysql"] } })).toThrow();
     });
 
     it("partitions executable targets into deterministic whole-package shards", () => {
