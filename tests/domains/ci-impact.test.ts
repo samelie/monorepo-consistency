@@ -113,12 +113,21 @@ describe("calendar orchestration on the real workspace inventory", () => {
         expect(plan.targets.filter(target => target.package === "@mono-cal/root")).toEqual([
             { package: "@mono-cal/root", task: "knip", command: "pnpm", args: ["--filter", "@mono-cal/root", "run", "knip"] },
         ]);
-        expect(plan.targets.filter(target => target.package === "mono-cal-backend" && target.task === "test")).toEqual([
-            { package: "mono-cal-backend", task: "test", command: "pnpm", args: ["--filter", "mono-cal-backend", "run", "test:ci"] },
-        ]);
+        // a dated temporary disable (monorepo.config.json) drops the target, and the plan must still say so
+        const backendTest = policy.packages["mono-cal-backend"]?.test;
+        if (backendTest?.kind === "skip") {
+            expect(backendTest.reason).toMatch(/^TEMPORARILY DISABLED \d{4}-\d{2}-\d{2} /);
+            expect(plan.targets.filter(target => target.package === "mono-cal-backend" && target.task === "test")).toEqual([]);
+            expect(plan.omitted).toContainEqual(expect.objectContaining({ package: "mono-cal-backend", task: "test", reason: backendTest.reason }));
+        } else {
+            expect(plan.targets.filter(target => target.package === "mono-cal-backend" && target.task === "test")).toEqual([
+                { package: "mono-cal-backend", task: "test", command: "pnpm", args: ["--filter", "mono-cal-backend", "run", "test:ci"] },
+            ]);
+        }
         expect(new Set(plan.targets.map(target => `${target.package}:${target.task}`)).size).toBe(plan.targets.length);
         for (const name of group) {
-            const tasks = name === "@mono-cal/webui" ? ["types", "lint", "knip"] : ciTasks;
+            const skipsTest = policy.packages[name]?.test?.kind === "skip";
+            const tasks = (name === "@mono-cal/webui" ? ["types", "lint", "knip"] : ciTasks).filter(task => task !== "test" || !skipsTest);
             expect(plan.targets.filter(target => target.package === name).map(target => target.task)).toEqual(tasks);
         }
         expect(plan.omitted.some(target => target.package === "@mono-cal/root")).toBe(false);
